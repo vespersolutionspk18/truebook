@@ -7,15 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Link from 'next/link';
-import { convertMonroneyToJSON } from '@/lib/pdf-to-json';
-import { MonroneySticker } from '@/components/ui/monroney-sticker';
+import { NeoVinDisplay } from '@/components/ui/neovin-display';
 
 interface VehiclePair {
-  property: string;
-  value: string;
-}
-
-interface MonroneyPair {
   property: string;
   value: string;
 }
@@ -25,10 +19,13 @@ interface VehicleDetails {
   vin: string;
   vehiclePairs: VehiclePair[];
   createdAt: string;
-  monroney?: {
+  neoVin?: {
     id: string;
     vin: string;
-    monroneyPairs: MonroneyPair[];
+    year?: number;
+    make?: string;
+    model?: string;
+    [key: string]: unknown;
   };
 }
 
@@ -39,95 +36,46 @@ export default function VehicleDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isLoadingMonroney, setIsLoadingMonroney] = useState(false);
-  const [monroneyError, setMonroneyError] = useState<string | null>(null);
+  const [isLoadingNeoVin, setIsLoadingNeoVin] = useState(false);
+  const [neoVinError, setNeoVinError] = useState<string | null>(null);
 
-  const handleFetchMonroney = async () => {
-    if (!vehicle?.vin) return;
+
+  const handleDecodeVIN = async () => {
+    if (!vehicle?.uuid) return;
     
-    setIsLoadingMonroney(true);
-    setMonroneyError(null);
+    setIsLoadingNeoVin(true);
+    setNeoVinError(null);
     
     try {
-      const response = await fetch(`/api/monroney/${vehicle.vin}`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/pdf',
-        },
+      const response = await fetch(`/api/vehicles/${vehicle.uuid}/neovin`, {
+        method: 'POST',
       });
 
       if (!response.ok) {
-        switch (response.status) {
-          case 400:
-            throw new Error('Invalid VIN provided');
-          case 404:
-            throw new Error('Monroney label not found for this VIN');
-          case 405:
-            throw new Error('Method not allowed');
-          default:
-            throw new Error('Failed to fetch Monroney label');
-        }
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to decode VIN');
       }
 
-      const blob = await response.blob();
+      const { neoVin } = await response.json();
+      console.log('NeoVin data received:', neoVin);
       
-      // Convert PDF to JSON
-      const jsonData = await convertMonroneyToJSON(blob);
-      console.log('Monroney PDF converted to JSON:', jsonData);
-      
-      // Save Monroney data
-      const saveResponse = await fetch('/api/monroney/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          vehicleId: vehicle.uuid,
-          vin: vehicle.vin,
-          monroneyData: jsonData
-        })
-      });
-
-      let errorData;
-      try {
-        errorData = await saveResponse.json();
-        console.log('Monroney save response:', errorData);
-      } catch (parseError) {
-        console.error('Failed to parse save response:', parseError);
-        throw new Error('Failed to parse server response');
-      }
-
-      if (!saveResponse.ok) {
-        throw new Error(errorData.error || 'Failed to save Monroney data');
-      }
-
-      // Update the vehicle state with the new Monroney data
-      const updatedMonroneyData = {
-        id: errorData.id,
-        vin: vehicle.vin,
-        monroneyPairs: Object.entries(jsonData).map(([key, value]) => ({
-          property: key,
-          value: value
-        }))
-      };
-      console.log('Updated Monroney data structure:', updatedMonroneyData);
-
+      // Update the vehicle state with the new NeoVin data
       setVehicle(prevVehicle => ({
         ...prevVehicle!,
-        monroney: updatedMonroneyData
+        neoVin
       }));
     } catch (error) {
-      console.error('Error fetching Monroney label:', error);
-      setMonroneyError(error instanceof Error ? error.message : 'Failed to fetch Monroney label');
+      console.error('Error decoding VIN:', error);
+      setNeoVinError(error instanceof Error ? error.message : 'Failed to decode VIN');
     } finally {
-      setIsLoadingMonroney(false);
+      setIsLoadingNeoVin(false);
     }
   };
 
   useEffect(() => {
     const fetchVehicleDetails = async () => {
       try {
-        const response = await fetch(`/api/vehicles/${params.uuid}?include=monroney`);
+        const response = await fetch(`/api/vehicles/${params.uuid}?include=neovin`);
         if (!response.ok) {
           if (response.status === 404) {
             throw new Error('Vehicle not found');
@@ -138,6 +86,7 @@ export default function VehicleDetailsPage() {
           throw new Error('Failed to fetch vehicle details');
         }
         const data = await response.json();
+        console.log('Vehicle data loaded:', data);
         setVehicle(data);
 
         // Log VIN, Model Year, and Make
@@ -208,13 +157,11 @@ export default function VehicleDetailsPage() {
       </div>
 
       <Tabs defaultValue="vehicle-info" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="vehicle-info">Vehicle Information</TabsTrigger>
           <TabsTrigger value="build-sheet">Build Sheet</TabsTrigger>
-          <TabsTrigger value="monroney">Monroney Label</TabsTrigger>
           <TabsTrigger value="ai-comparison">AI Comparison</TabsTrigger>
           <TabsTrigger value="bookout">Bookout</TabsTrigger>
-          
         </TabsList>
 
         <TabsContent value="vehicle-info">
@@ -241,132 +188,48 @@ export default function VehicleDetailsPage() {
 
         <TabsContent value="build-sheet">
           <Card>
-            <CardHeader>
-              <CardTitle>Build Sheet</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex flex-col gap-4">
-                  <div className="border p-4 rounded">
-                    <div className="mb-4 text-sm text-muted-foreground">
-                      <p>Debug Info:</p>
-                      <p>Year: {vehicle.vehiclePairs.find((p: VehiclePair) => p.property === 'Model Year')?.value || 'N/A'}</p>
-                      <p>Make: {vehicle.vehiclePairs.find((p: VehiclePair) => p.property === 'Make')?.value || 'N/A'}</p>
-                      <p>VIN: {vehicle.vin}</p>
-                    </div>
-                    <div className="text-sm text-muted-foreground">Build sheet information will be available soon.</div>
-                  </div>
-                </div>
-                <div className="max-h-[calc(100vh-370px)] overflow-y-auto scrollbar-hide">
-                  <div className="grid gap-4">
-                    <div className="grid grid-cols-2 gap-4 border-b pb-2 font-medium text-muted-foreground">
-                      <div>Property</div>
-                      <div>Value</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 border-b pb-2">
-                      <div className="text-sm">Engine</div>
-                      <div className="text-sm">3.6L V6</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 border-b pb-2">
-                      <div className="text-sm">Transmission</div>
-                      <div className="text-sm">8-Speed Automatic</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 border-b pb-2">
-                      <div className="text-sm">Drive Type</div>
-                      <div className="text-sm">All-Wheel Drive</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 border-b pb-2">
-                      <div className="text-sm">Exterior Color</div>
-                      <div className="text-sm">Granite Crystal Metallic</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 border-b pb-2">
-                      <div className="text-sm">Interior Color</div>
-                      <div className="text-sm">Black</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 border-b pb-2">
-                      <div className="text-sm">Wheelbase</div>
-                      <div className="text-sm">114.0 inches</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 border-b pb-2">
-                      <div className="text-sm">Track Width</div>
-                      <div className="text-sm">64.6 inches</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 border-b pb-2">
-                      <div className="text-sm">Gross Vehicle Weight</div>
-                      <div className="text-sm">5,650 lbs</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 border-b pb-2">
-                      <div className="text-sm">Payload Capacity</div>
-                      <div className="text-sm">1,250 lbs</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 border-b pb-2">
-                      <div className="text-sm">Towing Capacity</div>
-                      <div className="text-sm">7,200 lbs</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="monroney">
-          <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Monroney Label</CardTitle>
-              {!vehicle.monroney && (
+              <CardTitle>Build Sheet</CardTitle>
+              {!vehicle.neoVin && (
                 <Button 
                   variant="default" 
                   size="sm" 
                   className="ml-2"
-                  onClick={handleFetchMonroney}
-                  disabled={isLoadingMonroney}
+                  onClick={handleDecodeVIN}
+                  disabled={isLoadingNeoVin}
                 >
-                  {isLoadingMonroney ? "Loading..." : "Fetch Monroney Sticker"}
+                  {isLoadingNeoVin ? "Decoding..." : "Decode VIN"}
                 </Button>
               )}
             </CardHeader>
             <CardContent>
-              {monroneyError ? (
-                <p className="text-sm text-red-500">{monroneyError}</p>
+              {neoVinError ? (
+                <p className="text-sm text-red-500">{neoVinError}</p>
+              ) : vehicle.neoVin ? (
+                <NeoVinDisplay data={vehicle.neoVin} />
               ) : (
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-4">
-                    <div className="border p-4 rounded">
-                      {/* Debug info */}
-                      <div className="mb-4 text-sm text-muted-foreground">
-                        <p>Debug Info:</p>
-                        <p>Year: {vehicle.vehiclePairs.find((p: VehiclePair) => p.property === 'Model Year')?.value || 'N/A'}</p>
-                        <p>Make: {vehicle.vehiclePairs.find((p: VehiclePair) => p.property === 'Make')?.value || 'N/A'}</p>
-                        <p>VIN: {vehicle.vin}</p>
-                      </div>
-                      <MonroneySticker
-                        year={vehicle.vehiclePairs.find((p: VehiclePair) => p.property === 'Model Year')?.value || ''}
-                        make={vehicle.vehiclePairs.find((p: VehiclePair) => p.property === 'Make')?.value || ''}
-                        vin={vehicle.vin}
-                        vendorId="MonroneyLabelsTest"
-                      />
-                    </div>
-                    {!vehicle.monroney && (
-                      <p className="text-sm text-muted-foreground">No Monroney label data available. Click the button above to fetch it.</p>
-                    )}
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">
+                    No build sheet data available. Click "Decode VIN" to fetch vehicle specifications.
+                  </p>
+                  <div className="text-sm text-muted-foreground">
+                    <p>VIN: {vehicle.vin}</p>
                   </div>
-                  {vehicle.monroney && (
-                    <div className="max-h-[calc(100vh-370px)] overflow-y-auto scrollbar-hide">
-                      <div className="grid gap-4">
-                        {vehicle.monroney.monroneyPairs
-                          .filter((pair: MonroneyPair) => pair.value && pair.value.trim() !== '')
-                          .map((pair: MonroneyPair, index: number) => (
-                            <div key={index} className="grid grid-cols-2 gap-4 border-b pb-2">
-                              <p className="text-sm font-medium text-muted-foreground">{pair.property}</p>
-                              <p className="text-sm">{pair.value}</p>
-                            </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="ai-comparison">
+          <Card>
+            <CardHeader>
+              <CardTitle>AI Comparison</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">AI comparison feature coming soon.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

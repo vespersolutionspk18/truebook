@@ -91,24 +91,29 @@ export default function SettingsPage() {
   const handleSaveUserInfo = async () => {
     setIsLoading(true);
     try {
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('email', email);
+      formData.append('notifications', notifications.toString());
+      formData.append('emailUpdates', emailUpdates.toString());
+      formData.append('darkMode', darkMode.toString());
+      
+      if (avatarFile) {
+        formData.append('avatar', avatarFile);
+      }
+
       const response = await fetch('/api/user/settings', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          email,
-          notifications,
-          emailUpdates,
-          darkMode
-        })
+        body: formData
       });
   
       if (!response.ok) {
         throw new Error('Failed to save user information');
       }
   
+      // Clear the avatar file after successful upload
+      setAvatarFile(null);
+      
       toast({
         title: "Success",
         description: "User information saved successfully",
@@ -131,12 +136,16 @@ export default function SettingsPage() {
     setIsLoading(true);
     setPasswordError('');
     try {
-      const response = await fetch('/api/user/settings/password', {
+      const response = await fetch('/api/user/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          name,
+          notifications,
+          emailUpdates,
+          darkMode,
           currentPassword,
           newPassword,
         })
@@ -282,7 +291,7 @@ export default function SettingsPage() {
                 <p className="text-sm text-red-500 mt-2">{passwordError}</p>
               )}
               <Button 
-                onClick={() => handleSave()} 
+                onClick={() => handleUpdatePassword()} 
                 disabled={isLoading || (!currentPassword && !newPassword)}
               >
                 {isLoading ? 'Saving...' : 'Update Password'}

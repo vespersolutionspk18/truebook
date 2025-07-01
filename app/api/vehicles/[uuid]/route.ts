@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getServerSession } from 'next-auth';
 
-export async function GET(request: Request, { params }: { params: { uuid: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ uuid: string }> }) {
   try {
-    // Ensure params is properly handled
-    const uuid = await Promise.resolve(params.uuid);
+    // Await params as required in Next.js 15
+    const { uuid } = await params;
     if (!uuid) {
       return new NextResponse('UUID is required', { status: 400 });
     }
@@ -35,6 +35,18 @@ export async function GET(request: Request, { params }: { params: { uuid: string
           include: {
             monroneyPairs: true
           }
+        },
+        neoVin: {
+          include: {
+            interiorColor: true,
+            exteriorColor: true,
+            rating: true,
+            warranty: true,
+            installedOptionsDetails: true,
+            features: true,
+            highValueFeatures: true,
+            installedEquipment: true,
+          }
         }
       }
     });
@@ -50,9 +62,9 @@ export async function GET(request: Request, { params }: { params: { uuid: string
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { uuid: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ uuid: string }> }) {
   try {
-    const uuid = await Promise.resolve(params.uuid);
+    const { uuid } = await params;
     if (!uuid) {
       return new NextResponse('UUID is required', { status: 400 });
     }

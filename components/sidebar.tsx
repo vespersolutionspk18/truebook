@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ import { HiOutlineDocumentDuplicate } from "react-icons/hi2";
 import { IoNotificationsOutline } from "react-icons/io5";
 import { IoHelpCircleOutline } from "react-icons/io5";
 import { TbPlugConnected } from "react-icons/tb";
+import { HiOutlineUsers } from "react-icons/hi2";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -26,6 +27,7 @@ export function Sidebar({ className }: SidebarProps) {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{uuid: string; vin: string}>>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const pathname = usePathname();
   const { data: session } = useSession();
   const { toast } = useToast();
@@ -38,6 +40,25 @@ export function Sidebar({ className }: SidebarProps) {
       .join('')
       .toUpperCase();
   };
+
+  // Fetch user avatar when session is available
+  useEffect(() => {
+    const fetchUserSettings = async () => {
+      if (session?.user?.email) {
+        try {
+          const response = await fetch('/api/user/settings');
+          if (response.ok) {
+            const settings = await response.json();
+            setUserAvatar(settings.avatar);
+          }
+        } catch (error) {
+          console.error('Error fetching user settings:', error);
+        }
+      }
+    };
+
+    fetchUserSettings();
+  }, [session]);
 
   const handleCancelSubscription = async () => {
     try {
@@ -246,6 +267,18 @@ export function Sidebar({ className }: SidebarProps) {
                   {expanded && <span className="ml-3 text-sm">Inventory</span>}
                 </div>
               </Link>
+              <Link href="/dashboard/users">
+                <div
+                  className={cn(
+                    "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
+                    !expanded && "justify-center p-2",
+                    pathname === "/dashboard/users" && "bg-white border-gray-300 text-black font-medium shadow-sm"
+                  )}
+                >
+                  <HiOutlineUsers className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
+                  {expanded && <span className="ml-3 text-sm">Users</span>}
+                </div>
+              </Link>
               <Link href="/dashboard/reports">
                 <div
                   className={cn(
@@ -319,9 +352,17 @@ export function Sidebar({ className }: SidebarProps) {
                 <DropdownMenuTrigger asChild>
                   <div className="flex items-center gap-2 px-2 py-3 mt-4 border-t border-gray-200 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors">
                     <div className="relative h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-2 border-gray-300">
-                      <span className="text-gray-600 text-sm font-medium">
-                        {session?.user?.name ? getInitials(session.user.name) : '?'}
-                      </span>
+                      {userAvatar ? (
+                        <img
+                          src={userAvatar}
+                          alt="User avatar"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-gray-600 text-sm font-medium">
+                          {session?.user?.name ? getInitials(session.user.name) : '?'}
+                        </span>
+                      )}
                     </div>
                     {expanded && (
                       <div className="flex flex-col">
@@ -334,9 +375,17 @@ export function Sidebar({ className }: SidebarProps) {
                 <DropdownMenuContent align="end" className="w-[200px]">
                   <div className="flex items-center gap-2 p-2 border-b">
                     <div className="relative h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-2 border-gray-300">
-                      <span className="text-gray-600 text-sm font-medium">
-                        {session?.user?.name ? getInitials(session.user.name) : '?'}
-                      </span>
+                      {userAvatar ? (
+                        <img
+                          src={userAvatar}
+                          alt="User avatar"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-gray-600 text-sm font-medium">
+                          {session?.user?.name ? getInitials(session.user.name) : '?'}
+                        </span>
+                      )}
                     </div>
                     <div className="flex flex-col">
                       <span className="text-sm font-medium text-gray-900">{session?.user?.name || 'Guest User'}</span>

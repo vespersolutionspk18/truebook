@@ -1,20 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { db } from '@/lib/db';
 import bcrypt from 'bcrypt';
 
 export async function GET() {
   try {
-    // Check if database is initialized
-    if (!db) {
-      console.error('Database client is not initialized');
-      return new NextResponse(JSON.stringify({ error: 'Database connection not available' }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
       return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
@@ -30,6 +22,7 @@ export async function GET() {
         select: {
           name: true,
           email: true,
+          image: true,
           settings: true
         }
       });
@@ -39,6 +32,7 @@ export async function GET() {
         return new NextResponse(JSON.stringify({
           name: session.user.name || '',
           email: session.user.email,
+          avatar: session.user.image || null,
           notifications: true,
           emailUpdates: true,
           darkMode: false
@@ -52,6 +46,7 @@ export async function GET() {
       return new NextResponse(JSON.stringify({
         name: user.name || '',
         email: user.email,
+        avatar: user.image || null,
         notifications: user.settings?.notifications ?? true,
         emailUpdates: user.settings?.emailUpdates ?? true,
         darkMode: user.settings?.darkMode ?? false
@@ -77,7 +72,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
       return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
@@ -86,7 +81,43 @@ export async function POST(request: Request) {
       });
     }
 
-    const data = await request.json();
+    const contentType = request.headers.get('content-type');
+    let data: {
+      name?: string;
+      email?: string;
+      notifications?: boolean;
+      emailUpdates?: boolean;
+      darkMode?: boolean;
+      currentPassword?: string;
+      newPassword?: string;
+      avatar?: string;
+      password?: string;
+    };
+    
+    if (contentType?.includes('multipart/form-data')) {
+      // Handle form data with file upload
+      const formData = await request.formData();
+      data = {
+        name: formData.get('name') as string,
+        email: formData.get('email') as string,
+        notifications: formData.get('notifications') === 'true',
+        emailUpdates: formData.get('emailUpdates') === 'true',
+        darkMode: formData.get('darkMode') === 'true',
+        currentPassword: formData.get('currentPassword') as string,
+        newPassword: formData.get('newPassword') as string,
+      };
+      
+      const avatarFile = formData.get('avatar') as File;
+      if (avatarFile && avatarFile.size > 0) {
+        // Convert file to base64 for storage
+        const bytes = await avatarFile.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        data.avatar = `data:${avatarFile.type};base64,${buffer.toString('base64')}`;
+      }
+    } else {
+      // Handle JSON data
+      data = await request.json();
+    }
 
     // Validate input data
     if (!data || typeof data !== 'object') {
@@ -147,6 +178,7 @@ export async function POST(request: Request) {
       where: { email: session.user.email },
       data: {
         name: data.name,
+        ...(data.avatar && { image: data.avatar }),
         ...(data.password && { password: data.password }),
         settings: {
           upsert: {
@@ -166,6 +198,7 @@ export async function POST(request: Request) {
       select: {
         name: true,
         email: true,
+        image: true,
         settings: true
       }
     });
@@ -173,6 +206,7 @@ export async function POST(request: Request) {
     return new NextResponse(JSON.stringify({
       name: updatedUser.name,
       email: updatedUser.email,
+      avatar: updatedUser.image || null,
       notifications: updatedUser.settings?.notifications ?? true,
       emailUpdates: updatedUser.settings?.emailUpdates ?? true,
       darkMode: updatedUser.settings?.darkMode ?? false

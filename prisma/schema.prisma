@@ -13,6 +13,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  SUPERADMIN
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
 model User {
   id                String               @id @default(cuid())
   name              String?
@@ -20,6 +27,7 @@ model User {
   emailVerified     DateTime?
   image             String?
   password          String?
+  role              UserRole             @default(EMPLOYEE)
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
   accounts          Account[]
@@ -85,6 +93,7 @@ model Vehicle {
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   vehiclePairs VehiclePair[]
   monroney     Monroney?
+  neoVin       NeoVin?
 
   @@index([userId])
 }
@@ -138,4 +147,185 @@ model MonroneyCredentials {
   updatedAt     DateTime @updatedAt
 
   @@index([userId])
+}
+
+model NeoVin {
+  id                          String                      @id @default(cuid())
+  vin                         String                      @unique
+  vehicleId                   String                      @unique
+  vehicle                     Vehicle                     @relation(fields: [vehicleId], references: [uuid], onDelete: Cascade)
+  squishVin                   String?
+  year                        Int?
+  make                        String?
+  model                       String?
+  vehicleType                 String?
+  listingConfidence           String?
+  trim                        String?
+  trimConfidence              String?
+  version                     String?
+  versionConfidence           String?
+  transmission                String?
+  transmissionConfidence      String?
+  transmissionDescription     String?
+  drivetrain                  String?
+  powertrainType              String?
+  engine                      String?
+  fuelType                    String?
+  doors                       Int?
+  bodyType                    String?
+  bodySubtype                 String?
+  weight                      Int?
+  width                       Float?
+  height                      Float?
+  length                      Float?
+  cityMpg                     Int?
+  highwayMpg                  Int?
+  combinedMpg                 Int?
+  manufacturerCode            String?
+  packageCode                 String?
+  msrp                        Int?
+  deliveryCharges             Int?
+  installedOptionsMsrp        Int?
+  combinedMsrp                Int?
+  country                     String?
+  seatingCapacity             Int?
+  optionsPackages             String?              @db.Text
+  createdAt                   DateTime                    @default(now())
+  updatedAt                   DateTime                    @updatedAt
+  
+  // Relations
+  interiorColor               NeoVinInteriorColor?
+  exteriorColor               NeoVinExteriorColor?
+  rating                      NeoVinRating?
+  warranty                    NeoVinWarranty?
+  installedOptionsDetails     NeoVinInstalledOption[]
+  features                    NeoVinFeature[]
+  highValueFeatures           NeoVinHighValueFeature[]
+  installedEquipment          NeoVinInstalledEquipment[]
+
+  @@index([vin])
+  @@index([vehicleId])
+  @@index([make, model, year])
+}
+
+model NeoVinInteriorColor {
+  id          String  @id @default(cuid())
+  neoVinId    String  @unique
+  neoVin      NeoVin  @relation(fields: [neoVinId], references: [id], onDelete: Cascade)
+  code        String?
+  name        String?
+  confidence  String?
+  base        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NeoVinExteriorColor {
+  id          String  @id @default(cuid())
+  neoVinId    String  @unique
+  neoVin      NeoVin  @relation(fields: [neoVinId], references: [id], onDelete: Cascade)
+  code        String?
+  name        String?
+  msrp        String?
+  confidence  String?
+  base        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NeoVinRating {
+  id              String  @id @default(cuid())
+  neoVinId        String  @unique
+  neoVin          NeoVin  @relation(fields: [neoVinId], references: [id], onDelete: Cascade)
+  safetyFront     Int?
+  safetySide      Int?
+  safetyOverall   Int?
+  rollover        Int?
+  roofStrength    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model NeoVinWarranty {
+  id                              String  @id @default(cuid())
+  neoVinId                        String  @unique
+  neoVin                          NeoVin  @relation(fields: [neoVinId], references: [id], onDelete: Cascade)
+  totalDuration                   Int?
+  totalDistance                   Int?
+  powertrainDuration              Int?
+  powertrainDistance              Int?
+  antiCorrosionDuration           Int?
+  antiCorrosionDistance           Int?
+  roadsideAssistanceDuration      Int?
+  roadsideAssistanceDistance      Int?
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+}
+
+model NeoVinInstalledOption {
+  id          String  @id @default(cuid())
+  neoVinId    String
+  neoVin      NeoVin  @relation(fields: [neoVinId], references: [id], onDelete: Cascade)
+  code        String
+  name        String
+  msrp        String?
+  type        String?
+  confidence  String?
+  verified    Boolean?
+  rule        String?
+  salePrice   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([neoVinId])
+  @@index([code])
+}
+
+model NeoVinFeature {
+  id            String  @id @default(cuid())
+  neoVinId      String
+  neoVin        NeoVin  @relation(fields: [neoVinId], references: [id], onDelete: Cascade)
+  optionCode    String
+  category      String
+  featureType   String
+  description   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([neoVinId])
+  @@index([optionCode])
+  @@index([category])
+}
+
+model NeoVinHighValueFeature {
+  id            String  @id @default(cuid())
+  neoVinId      String
+  neoVin        NeoVin  @relation(fields: [neoVinId], references: [id], onDelete: Cascade)
+  optionCode    String
+  category      String
+  description   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([neoVinId])
+  @@index([optionCode])
+  @@index([category])
+}
+
+model NeoVinInstalledEquipment {
+  id            String  @id @default(cuid())
+  neoVinId      String
+  neoVin        NeoVin  @relation(fields: [neoVinId], references: [id], onDelete: Cascade)
+  optionCode    String
+  category      String
+  item          String
+  attribute     String
+  location      String?
+  value         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([neoVinId])
+  @@index([optionCode])
+  @@index([category])
 }
