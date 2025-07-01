@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# documentation and audit files
+CLAUDE.md
+code-review-audit.md
+README.md
+SECURITY_AUDIT_REPORT.md
