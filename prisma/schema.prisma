@@ -87,6 +87,7 @@ model LoginAttempt {
 model Vehicle {
   uuid         String        @id @default(uuid())
   vin          String        @unique
+  mileage      Int?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   userId       String
@@ -94,6 +95,7 @@ model Vehicle {
   vehiclePairs VehiclePair[]
   monroney     Monroney?
   neoVin       NeoVin?
+  bookouts     Bookout[]
 
   @@index([userId])
 }
@@ -328,4 +330,120 @@ model NeoVinInstalledEquipment {
   @@index([neoVinId])
   @@index([optionCode])
   @@index([category])
+}
+
+model Bookout {
+  id                String   @id @default(cuid())
+  vehicleId         String
+  vehicle           Vehicle  @relation(fields: [vehicleId], references: [uuid], onDelete: Cascade)
+  provider          String   // e.g., "jdpower", "kbb", "blackbook"
+  mileage           Int?
+  region            Int?
+  
+  // Vehicle info at time of bookout
+  year              Int?
+  make              String?
+  model             String?
+  trim              String?
+  trim2             String?
+  bodyStyle         String?
+  bodyType          String?
+  doors             Int?
+  drivetrain        String?
+  engine            String?
+  transmission      String?
+  fuelType          String?
+  vehicleType       String?
+  ucgVehicleId      String?
+  ucgSubsegment     String?
+  modelNumber       String?
+  
+  // Physical specs
+  liters            String?
+  cylinders         Int?
+  curbWeight        Int?
+  
+  // All valuation data
+  baseMsrp          Int?
+  baseCleanTradeIn  Int?
+  baseAverageTradeIn Int?
+  baseRoughTradeIn  Int?
+  baseCleanRetail   Int?
+  baseLoanValue     Int?
+  
+  // Adjusted values
+  cleanTradeIn      Int?
+  averageTradeIn    Int?
+  roughTradeIn      Int?
+  cleanRetail       Int?
+  loanValue         Int?
+  
+  // Mileage data
+  mileageAdjustment Int?
+  averageMileage    Int?
+  maxMileageAdj     Int?
+  minMileageAdj     Int?
+  mileageClass      String?
+  
+  // VIN options adjustments
+  vinOptionsTradeIn Int?
+  vinOptionsRetail  Int?
+  vinOptionsLoan    Int?
+  
+  // Minimum adjustments
+  minAdjRetail      Int?
+  minAdjCleanTrade  Int?
+  minAdjAverageTrade Int?
+  minAdjRoughTrade  Int?
+  minAdjLoan        Int?
+  minAdjRetailForLoan Int?
+  
+  // JD Power specific IDs
+  vid               String?
+  rollupVehicleId   String?
+  requestId         String?
+  authId            String?
+  
+  // Store raw response data as JSON - ALL THE FUCKING DATA
+  rawData           Json?
+  
+  // Accessories
+  accessories       BookoutAccessory[]
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([vehicleId])
+  @@index([provider])
+  @@index([createdAt])
+  @@index([ucgVehicleId])
+}
+
+model BookoutAccessory {
+  id                String   @id @default(cuid())
+  bookoutId         String
+  bookout           Bookout  @relation(fields: [bookoutId], references: [id], onDelete: Cascade)
+  
+  code              String
+  name              String
+  type              String?
+  category          String?
+  msrp              Int?
+  
+  // Valuation adjustments for this accessory
+  cleanTradeAdj     Int?
+  averageTradeAdj   Int?
+  roughTradeAdj     Int?
+  cleanRetailAdj    Int?
+  loanAdj           Int?
+  
+  // Option logic
+  includesCode      String?
+  excludesCode      String?
+  isFactoryInstalled Boolean @default(false)
+  
+  createdAt         DateTime @default(now())
+  
+  @@index([bookoutId])
+  @@index([code])
 }
