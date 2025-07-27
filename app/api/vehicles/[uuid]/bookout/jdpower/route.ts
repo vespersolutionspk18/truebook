@@ -263,7 +263,12 @@ export async function POST(
                 excludesCode: handleNA(accessory.excludes),
                 // Installation status - 'isadded' indicates if it's factory installed
                 // 'isincluded' means it's already included in the base value
-                isFactoryInstalled: accessory.isadded === 1 || accessory.isadded === '1' || accessory.isadded === true || accessory.isincluded === 1
+                isFactoryInstalled: accessory.isadded === 1 || accessory.isadded === '1' || accessory.isadded === true || accessory.isincluded === 1,
+                // Selection state - NEW FIELDS
+                // Initially select accessories that are factory installed or included in base value
+                isSelected: accessory.isadded === 1 || accessory.isadded === '1' || accessory.isadded === true || accessory.isincluded === 1,
+                // All accessories are initially available
+                isAvailable: true
               };
               
               console.log(`Creating accessory with data:`, accessoryData);
@@ -275,6 +280,38 @@ export async function POST(
 
             const createdAccessories = await Promise.all(accessoryPromises);
             console.log(`Created ${createdAccessories.length} accessories`);
+            
+            // Calculate total equipment value impact from the stored accessories
+            const storedAccessories = await tx.bookoutAccessory.findMany({
+              where: { bookoutId: newBookout.id }
+            });
+            
+            let totalTradeIn = 0;
+            let totalRetail = 0; 
+            let totalLoan = 0;
+            
+            storedAccessories.forEach((accessory) => {
+              totalTradeIn += accessory.cleanTradeAdj || 0;
+              totalRetail += accessory.cleanRetailAdj || 0;
+              totalLoan += accessory.loanAdj || 0;
+            });
+            
+            console.log('Calculated equipment totals from stored accessories:', { 
+              totalTradeIn, 
+              totalRetail, 
+              totalLoan,
+              accessoryCount: storedAccessories.length 
+            });
+            
+            // Update the bookout with calculated equipment values
+            await tx.bookout.update({
+              where: { id: newBookout.id },
+              data: {
+                vinOptionsTradeIn: totalTradeIn,
+                vinOptionsRetail: totalRetail,
+                vinOptionsLoan: totalLoan
+              }
+            });
           } else {
             console.log('No accessories to create:', {
               hasAccessoriesData: !!accessoriesData,

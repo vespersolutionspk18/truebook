@@ -442,8 +442,101 @@ model BookoutAccessory {
   excludesCode      String?
   isFactoryInstalled Boolean @default(false)
   
+  // Selection state - NEW FIELD
+  isSelected        Boolean @default(false)  // Whether this accessory is currently selected for valuation
+  isAvailable       Boolean @default(true)   // Whether this accessory is available (vs disabled by excludes logic)
+  
   createdAt         DateTime @default(now())
   
   @@index([bookoutId])
   @@index([code])
+}
+
+model AIValidation {
+  id                String   @id @default(cuid())
+  vehicleId         String
+  bookoutId         String?
+  provider          String   // e.g., "gemini", "openai"
+  validationType    String   // e.g., "accessory_comparison", "price_validation"
+  
+  // Input data sent to AI
+  inputData         Json
+  
+  // AI output/result
+  outputData        Json
+  
+  // Full prompt sent to AI
+  prompt            String   @db.Text
+  
+  // Raw AI response
+  rawResponse       String   @db.Text
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations for change tracking
+  snapshot          BookoutSnapshot?
+  changeLogs        BookoutChangeLog[]
+  
+  @@index([vehicleId])
+  @@index([provider])
+  @@index([validationType])
+  @@index([createdAt])
+}
+
+model BookoutSnapshot {
+  id                String   @id @default(cuid())
+  originalBookoutId String
+  validationId      String   @unique
+  
+  // Complete snapshot of original bookout state
+  snapshotData      Json     // Full bookout + accessories state before validation
+  
+  // Metadata about the snapshot
+  reason            String   // "pre_validation", "manual_backup", etc.
+  description       String?  // Optional description of why snapshot was taken
+  
+  createdAt         DateTime @default(now())
+  
+  // Relations
+  validation        AIValidation @relation(fields: [validationId], references: [id], onDelete: Cascade)
+  
+  @@index([originalBookoutId])
+  @@index([validationId])
+  @@index([createdAt])
+}
+
+model BookoutChangeLog {
+  id              String   @id @default(cuid())
+  validationId    String
+  bookoutId       String
+  
+  // Change details
+  changeType      String   // "accessory_selected", "accessory_deselected", "value_updated", "bookout_revalued"
+  entityType      String   // "bookout", "accessory"
+  entityId        String?  // accessory ID if applicable
+  entityCode      String?  // accessory code for easier reference
+  
+  // Before/After values
+  fieldName       String   // "cleanTradeIn", "isSelected", etc.
+  beforeValue     String?  // JSON string of before value
+  afterValue      String?  // JSON string of after value
+  valueDifference Int?     // for numeric fields (after - before)
+  
+  // Context and reasoning
+  reason          String   // "ai_confirmed_match", "inclusion_logic", "jdpower_revaluation", etc.
+  confidence      Float?   // AI confidence for this change (0.0 - 1.0)
+  aiValidationStatus String? // "CONFIRMED", "PARTIAL_MATCH", etc. if AI-driven
+  
+  // Metadata
+  sequence        Int      // Order of changes within validation
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  validation      AIValidation @relation(fields: [validationId], references: [id], onDelete: Cascade)
+  
+  @@index([validationId])
+  @@index([bookoutId])
+  @@index([changeType])
+  @@index([sequence])
 }

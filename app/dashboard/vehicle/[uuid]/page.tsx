@@ -3,12 +3,13 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { NeoVinDisplay } from '@/components/ui/neovin-display';
+import AIValidationComponent from '@/components/AIValidationComponent';
 
 interface VehiclePair {
   property: string;
@@ -430,11 +431,27 @@ export default function VehicleDetailsPage() {
           <Card>
             <CardHeader>
               <CardTitle>AI Comparison</CardTitle>
+              <CardDescription>
+                Validate JD Power bookout accessories against build sheet features using AI
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">AI comparison feature coming soon.</p>
-              </div>
+              <AIValidationComponent 
+                vehicleUuid={vehicle.uuid} 
+                onValidationComplete={async () => {
+                  // Refresh vehicle data to get updated bookout values
+                  try {
+                    const response = await fetch(`/api/vehicles/${vehicle.uuid}`);
+                    if (response.ok) {
+                      const updatedVehicle = await response.json();
+                      setVehicle(updatedVehicle);
+                      console.log('Vehicle data refreshed after AI validation');
+                    }
+                  } catch (error) {
+                    console.error('Failed to refresh vehicle data after validation:', error);
+                  }
+                }}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -484,137 +501,255 @@ export default function VehicleDetailsPage() {
                   )}
                   
                   {expandedProvider === 'jdpower' && getLatestBookout('jdpower') && (
-                    <div className="border-t bg-gray-50 dark:bg-gray-900 space-y-4">
-                      {/* Vehicle Details */}
-                      <div className="p-4 border-b">
-                        <h4 className="font-semibold mb-2">Vehicle Details</h4>
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                          <div><span className="text-muted-foreground">Year:</span> {getLatestBookout('jdpower')!.year}</div>
-                          <div><span className="text-muted-foreground">Make:</span> {getLatestBookout('jdpower')!.make}</div>
-                          <div><span className="text-muted-foreground">Model:</span> {getLatestBookout('jdpower')!.model}</div>
-                          <div><span className="text-muted-foreground">Trim:</span> {getLatestBookout('jdpower')!.trim}</div>
-                          <div><span className="text-muted-foreground">Body:</span> {getLatestBookout('jdpower')!.bodyStyle}</div>
-                          <div><span className="text-muted-foreground">Drivetrain:</span> {getLatestBookout('jdpower')!.drivetrain}</div>
-                          <div><span className="text-muted-foreground">Engine:</span> {getLatestBookout('jdpower')!.engine}</div>
-                          <div><span className="text-muted-foreground">Transmission:</span> {getLatestBookout('jdpower')!.transmission || 'N/A'}</div>
-                          <div><span className="text-muted-foreground">Fuel:</span> {getLatestBookout('jdpower')!.fuelType}</div>
-                        </div>
-                      </div>
-                      
-                      {/* Adjusted Values */}
-                      <div className="p-4 border-b">
-                        <h4 className="font-semibold mb-2">Current Market Values (Mileage Adjusted)</h4>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="border-t bg-white dark:bg-gray-950 min-h-[600px]">
+                      {/* Header */}
+                      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
+                        <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-muted-foreground">Clean Trade-In</p>
-                            <p className="font-semibold text-green-600">
-                              ${getLatestBookout('jdpower')!.cleanTradeIn?.toLocaleString() || 'N/A'}
+                            <h3 className="text-2xl font-bold mb-2">J.D. Power Vehicle Valuation Report</h3>
+                            <p className="text-blue-100 text-sm">
+                              {getLatestBookout('jdpower')!.year} {getLatestBookout('jdpower')!.make} {getLatestBookout('jdpower')!.model} {getLatestBookout('jdpower')!.trim}
+                            </p>
+                            <p className="text-blue-200 text-xs mt-1">
+                              VIN: {vehicle.vin} • Report Date: {new Date(getLatestBookout('jdpower')!.createdAt).toLocaleDateString()}
                             </p>
                           </div>
-                          <div>
-                            <p className="text-muted-foreground">Average Trade-In</p>
-                            <p className="font-semibold">
-                              ${getLatestBookout('jdpower')!.averageTradeIn?.toLocaleString() || 'N/A'}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Rough Trade-In</p>
-                            <p className="font-semibold text-orange-600">
-                              ${getLatestBookout('jdpower')!.roughTradeIn?.toLocaleString() || 'N/A'}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Clean Retail</p>
-                            <p className="font-semibold text-blue-600">
-                              ${getLatestBookout('jdpower')!.cleanRetail?.toLocaleString() || 'N/A'}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Loan Value</p>
-                            <p className="font-semibold">
-                              ${getLatestBookout('jdpower')!.loanValue?.toLocaleString() || 'N/A'}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Mileage Adjustment</p>
-                            <p className="font-semibold ${getLatestBookout('jdpower')!.mileageAdjustment! > 0 ? 'text-green-600' : 'text-red-600'}">
-                              ${getLatestBookout('jdpower')!.mileageAdjustment?.toLocaleString() || '0'}
-                            </p>
+                          <div className="text-right">
+                            <div className="bg-white/10 rounded-lg p-3 backdrop-blur">
+                              <p className="text-xs text-blue-200">Primary Trade Value</p>
+                              <p className="text-2xl font-bold">
+                                ${getLatestBookout('jdpower')!.cleanTradeIn?.toLocaleString() || 'N/A'}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      
-                      {/* Base Values */}
-                      <div className="p-4 border-b">
-                        <h4 className="font-semibold mb-2">Base Values (Average Mileage)</h4>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p className="text-muted-foreground">Base Clean Trade-In</p>
-                            <p className="font-semibold">
-                              ${getLatestBookout('jdpower')!.baseCleanTradeIn?.toLocaleString() || 'N/A'}
-                            </p>
+
+                      {/* Main Content */}
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
+                        {/* Left Column - Vehicle Details & Values */}
+                        <div className="lg:col-span-2 space-y-6">
+                          {/* Vehicle Specifications */}
+                          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6">
+                            <h4 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Vehicle Specifications</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-gray-500 uppercase">Year</p>
+                                <p className="font-semibold">{getLatestBookout('jdpower')!.year}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-gray-500 uppercase">Make</p>
+                                <p className="font-semibold">{getLatestBookout('jdpower')!.make}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-gray-500 uppercase">Model</p>
+                                <p className="font-semibold">{getLatestBookout('jdpower')!.model}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-gray-500 uppercase">Trim</p>
+                                <p className="font-semibold">{getLatestBookout('jdpower')!.trim}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-gray-500 uppercase">Body Style</p>
+                                <p className="font-semibold">{getLatestBookout('jdpower')!.bodyStyle}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-gray-500 uppercase">Drivetrain</p>
+                                <p className="font-semibold">{getLatestBookout('jdpower')!.drivetrain}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-gray-500 uppercase">Engine</p>
+                                <p className="font-semibold text-xs">{getLatestBookout('jdpower')!.engine}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-gray-500 uppercase">Transmission</p>
+                                <p className="font-semibold text-xs">{getLatestBookout('jdpower')!.transmission || 'N/A'}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-gray-500 uppercase">Fuel Type</p>
+                                <p className="font-semibold">{getLatestBookout('jdpower')!.fuelType}</p>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-muted-foreground">Base Average Trade-In</p>
-                            <p className="font-semibold">
-                              ${getLatestBookout('jdpower')!.baseAverageTradeIn?.toLocaleString() || 'N/A'}
-                            </p>
+
+                          {/* Market Values */}
+                          <div className="bg-white dark:bg-gray-900 rounded-lg border shadow-sm">
+                            <div className="p-6 border-b">
+                              <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Current Market Values</h4>
+                              <p className="text-sm text-gray-500 mt-1">Adjusted for {getLatestBookout('jdpower')!.mileage?.toLocaleString()} miles</p>
+                            </div>
+                            <div className="p-6">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                  <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                                    <p className="text-sm font-medium text-green-800 dark:text-green-200">Clean Trade-In</p>
+                                    <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+                                      ${getLatestBookout('jdpower')!.cleanTradeIn?.toLocaleString() || 'N/A'}
+                                    </p>
+                                    <p className="text-xs text-green-600 dark:text-green-400">Excellent condition</p>
+                                  </div>
+                                  <div className="bg-gray-50 dark:bg-gray-800 border rounded-lg p-4">
+                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Average Trade-In</p>
+                                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                                      ${getLatestBookout('jdpower')!.averageTradeIn?.toLocaleString() || 'N/A'}
+                                    </p>
+                                    <p className="text-xs text-gray-500">Good condition</p>
+                                  </div>
+                                  <div className="bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+                                    <p className="text-sm font-medium text-orange-800 dark:text-orange-200">Rough Trade-In</p>
+                                    <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+                                      ${getLatestBookout('jdpower')!.roughTradeIn?.toLocaleString() || 'N/A'}
+                                    </p>
+                                    <p className="text-xs text-orange-600 dark:text-orange-400">Fair condition</p>
+                                  </div>
+                                </div>
+                                <div className="space-y-4">
+                                  <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                                    <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Clean Retail</p>
+                                    <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                                      ${getLatestBookout('jdpower')!.cleanRetail?.toLocaleString() || 'N/A'}
+                                    </p>
+                                    <p className="text-xs text-blue-600 dark:text-blue-400">Retail market value</p>
+                                  </div>
+                                  <div className="bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                                    <p className="text-sm font-medium text-purple-800 dark:text-purple-200">Loan Value</p>
+                                    <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                                      ${getLatestBookout('jdpower')!.loanValue?.toLocaleString() || 'N/A'}
+                                    </p>
+                                    <p className="text-xs text-purple-600 dark:text-purple-400">Lending institution value</p>
+                                  </div>
+                                  <div className={`border rounded-lg p-4 ${getLatestBookout('jdpower')!.mileageAdjustment! >= 0 ? 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800'}`}>
+                                    <p className={`text-sm font-medium ${getLatestBookout('jdpower')!.mileageAdjustment! >= 0 ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
+                                      Mileage Adjustment
+                                    </p>
+                                    <p className={`text-2xl font-bold ${getLatestBookout('jdpower')!.mileageAdjustment! >= 0 ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100'}`}>
+                                      {getLatestBookout('jdpower')!.mileageAdjustment! >= 0 ? '+' : ''}${getLatestBookout('jdpower')!.mileageAdjustment?.toLocaleString() || '0'}
+                                    </p>
+                                    <p className={`text-xs ${getLatestBookout('jdpower')!.mileageAdjustment! >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                      {getLatestBookout('jdpower')!.mileageAdjustment! >= 0 ? 'Below average miles' : 'Above average miles'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-muted-foreground">Base Rough Trade-In</p>
-                            <p className="font-semibold">
-                              ${getLatestBookout('jdpower')!.baseRoughTradeIn?.toLocaleString() || 'N/A'}
-                            </p>
+                        </div>
+
+                        {/* Right Column - Mileage Info & Summary */}
+                        <div className="space-y-6">
+                          {/* Mileage Analysis */}
+                          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6">
+                            <h4 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Mileage Analysis</h4>
+                            <div className="space-y-4">
+                              <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                                <p className="text-xs font-medium text-gray-500 uppercase">Current Mileage</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                                  {getLatestBookout('jdpower')!.mileage?.toLocaleString() || 'N/A'}
+                                </p>
+                              </div>
+                              <div className="space-y-3 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600 dark:text-gray-400">Average for Year/Model:</span>
+                                  <span className="font-medium">{getLatestBookout('jdpower')!.averageMileage?.toLocaleString() || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600 dark:text-gray-400">Max Positive Adj:</span>
+                                  <span className="font-medium text-green-600">+${getLatestBookout('jdpower')!.maxMileageAdj?.toLocaleString() || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600 dark:text-gray-400">Max Negative Adj:</span>
+                                  <span className="font-medium text-red-600">${getLatestBookout('jdpower')!.minMileageAdj?.toLocaleString() || 'N/A'}</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-muted-foreground">Base Clean Retail</p>
-                            <p className="font-semibold">
-                              ${getLatestBookout('jdpower')!.baseCleanRetail?.toLocaleString() || 'N/A'}
-                            </p>
+                          {/* Base Values (Comparison) */}
+                          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6">
+                            <h4 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Base Values Comparison</h4>
+                            <p className="text-sm text-gray-500 mb-4">Values at average mileage ({getLatestBookout('jdpower')!.averageMileage?.toLocaleString()} miles)</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Base Clean Trade-In</p>
+                                <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                                  ${getLatestBookout('jdpower')!.baseCleanTradeIn?.toLocaleString() || 'N/A'}
+                                </p>
+                              </div>
+                              <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Base Average Trade-In</p>
+                                <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                                  ${getLatestBookout('jdpower')!.baseAverageTradeIn?.toLocaleString() || 'N/A'}
+                                </p>
+                              </div>
+                              <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Base Rough Trade-In</p>
+                                <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                                  ${getLatestBookout('jdpower')!.baseRoughTradeIn?.toLocaleString() || 'N/A'}
+                                </p>
+                              </div>
+                              <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Base Clean Retail</p>
+                                <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                                  ${getLatestBookout('jdpower')!.baseCleanRetail?.toLocaleString() || 'N/A'}
+                                </p>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
                       
-                      {/* Mileage Info */}
-                      <div className="p-4 border-b">
-                        <h4 className="font-semibold mb-2">Mileage Analysis</h4>
-                        <div className="text-xs space-y-1">
-                          <p><span className="text-muted-foreground">Vehicle Mileage:</span> {getLatestBookout('jdpower')!.mileage?.toLocaleString() || 'N/A'}</p>
-                          <p><span className="text-muted-foreground">Average Mileage for this Vehicle:</span> {getLatestBookout('jdpower')!.averageMileage?.toLocaleString() || 'N/A'}</p>
-                          <p><span className="text-muted-foreground">Max Positive Adjustment:</span> ${getLatestBookout('jdpower')!.maxMileageAdj?.toLocaleString() || 'N/A'}</p>
-                          <p><span className="text-muted-foreground">Max Negative Adjustment:</span> ${getLatestBookout('jdpower')!.minMileageAdj?.toLocaleString() || 'N/A'}</p>
-                        </div>
-                      </div>
-                      
-                      {/* ACCESSORIES - THE FUCKING ACCESSORIES! */}
+                      {/* Vehicle Equipment & Options */}
                       {getLatestBookout('jdpower')!.accessories && getLatestBookout('jdpower')!.accessories.length > 0 && (
-                        <div className="p-4 border-b">
-                          <h4 className="font-semibold mb-2">Vehicle Equipment & Options ({getLatestBookout('jdpower')!.accessories.length} items)</h4>
+                        <div className="col-span-1 lg:col-span-3 bg-white dark:bg-gray-900 rounded-lg border shadow-sm">
+                          <div className="p-6 border-b">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Vehicle Equipment & Options</h4>
+                                <p className="text-sm text-gray-500 mt-1">{getLatestBookout('jdpower')!.accessories.length} items identified from VIN</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-gray-500">Total Equipment Value</p>
+                                <p className="text-lg font-bold text-green-600">
+                                  +${getLatestBookout('jdpower')!.vinOptionsTradeIn?.toLocaleString() || '0'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
                           
-                          {/* Group accessories by category */}
-                          <div className="space-y-4 max-h-96 overflow-y-auto">
-                            {Object.entries(
-                              getLatestBookout('jdpower')!.accessories.reduce((groups: any, accessory: any) => {
-                                const category = accessory.category || 'Other';
-                                if (!groups[category]) groups[category] = [];
-                                groups[category].push(accessory);
-                                return groups;
-                              }, {})
-                            ).map(([category, accessories]: [string, any]) => (
-                              <div key={category}>
-                                <h5 className="text-xs font-medium text-muted-foreground mb-2 uppercase">{category}</h5>
-                                <div className="space-y-2">
-                                  {accessories.map((accessory: any, index: number) => {
-                                    const isIncluded = accessory.cleanTradeAdj === 0 && accessory.cleanRetailAdj === 0 && accessory.loanAdj === 0;
-                                    return (
-                                      <div key={`${category}-${index}`} className={`text-xs border rounded p-2 space-y-1 ${isIncluded ? 'bg-gray-50 dark:bg-gray-900' : ''}`}>
-                                        <div className="flex justify-between items-start">
-                                          <div className="flex-1">
-                                            <p className="font-medium flex items-center gap-2">
+                          <div className="p-6">
+                            {/* Equipment Categories */}
+                            <div className="space-y-6">
+                              {Object.entries(
+                                getLatestBookout('jdpower')!.accessories.reduce((groups: any, accessory: any) => {
+                                  const category = accessory.category || 'Other Equipment';
+                                  if (!groups[category]) groups[category] = [];
+                                  groups[category].push(accessory);
+                                  return groups;
+                                }, {})
+                              ).map(([category, accessories]: [string, any]) => (
+                                <div key={category} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                                  <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                                    <span className="w-2 h-2 bg-blue-600 rounded-full mr-2"></span>
+                                    {category}
+                                    <span className="ml-2 text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded">
+                                      {accessories.length} items
+                                    </span>
+                                  </h5>
+                                  
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {accessories.map((accessory: any, index: number) => {
+                                      const isIncluded = accessory.cleanTradeAdj === 0 && accessory.cleanRetailAdj === 0 && accessory.loanAdj === 0;
+                                      const hasValue = accessory.cleanTradeAdj > 0 || accessory.cleanRetailAdj > 0 || accessory.loanAdj > 0;
+                                      
+                                      return (
+                                        <div key={`${category}-${index}`} className={`bg-white dark:bg-gray-900 border rounded-lg p-3 ${hasValue ? 'border-green-200 dark:border-green-800' : 'border-gray-200 dark:border-gray-700'}`}>
+                                          <div className="flex justify-between items-start mb-2">
+                                            <h6 className="font-medium text-sm text-gray-900 dark:text-gray-100 flex-1 pr-2">
                                               {accessory.name}
+                                            </h6>
+                                            <div className="flex gap-1">
                                               {isIncluded && (
-                                                <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
-                                                  Included
+                                                <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
+                                                  Standard
                                                 </span>
                                               )}
                                               {accessory.isFactoryInstalled && (
@@ -622,78 +757,94 @@ export default function VehicleDetailsPage() {
                                                   Factory
                                                 </span>
                                               )}
-                                            </p>
-                                            <p className="text-muted-foreground">Code: {accessory.code}</p>
+                                            </div>
                                           </div>
-                                          <div className="text-right">
-                                            {!isIncluded && (
-                                              <div className="space-y-1">
-                                                {accessory.cleanTradeAdj && (
-                                                  <p className="text-muted-foreground">
-                                                    Trade: <span className="font-medium text-green-600">+${accessory.cleanTradeAdj.toLocaleString()}</span>
-                                                  </p>
-                                                )}
-                                                {accessory.cleanRetailAdj && (
-                                                  <p className="text-muted-foreground">
-                                                    Retail: <span className="font-medium text-green-600">+${accessory.cleanRetailAdj.toLocaleString()}</span>
-                                                  </p>
-                                                )}
-                                                {accessory.loanAdj && (
-                                                  <p className="text-muted-foreground">
-                                                    Loan: <span className="font-medium text-green-600">+${accessory.loanAdj.toLocaleString()}</span>
-                                                  </p>
-                                                )}
-                                              </div>
-                                            )}
-                                          </div>
+                                          
+                                          <p className="text-xs text-gray-500 mb-2">Code: {accessory.code}</p>
+                                          
+                                          {hasValue && (
+                                            <div className="space-y-1 text-xs">
+                                              {accessory.cleanTradeAdj > 0 && (
+                                                <div className="flex justify-between">
+                                                  <span className="text-gray-600 dark:text-gray-400">Trade:</span>
+                                                  <span className="font-medium text-green-600">+${accessory.cleanTradeAdj.toLocaleString()}</span>
+                                                </div>
+                                              )}
+                                              {accessory.cleanRetailAdj > 0 && (
+                                                <div className="flex justify-between">
+                                                  <span className="text-gray-600 dark:text-gray-400">Retail:</span>
+                                                  <span className="font-medium text-green-600">+${accessory.cleanRetailAdj.toLocaleString()}</span>
+                                                </div>
+                                              )}
+                                              {accessory.loanAdj > 0 && (
+                                                <div className="flex justify-between">
+                                                  <span className="text-gray-600 dark:text-gray-400">Loan:</span>
+                                                  <span className="font-medium text-green-600">+${accessory.loanAdj.toLocaleString()}</span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+                                          
+                                          {(accessory.includesCode || accessory.excludesCode) && (
+                                            <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500">
+                                              {accessory.includesCode && <p>• Includes: {accessory.includesCode}</p>}
+                                              {accessory.excludesCode && <p>• Excludes: {accessory.excludesCode}</p>}
+                                            </div>
+                                          )}
                                         </div>
-                                        
-                                        {/* Show includes/excludes relationships */}
-                                        {(accessory.includesCode || accessory.excludesCode) && (
-                                          <div className="text-xs text-muted-foreground mt-1 pt-1 border-t">
-                                            {accessory.includesCode && <p>Includes: {accessory.includesCode}</p>}
-                                            {accessory.excludesCode && <p>Excludes: {accessory.excludesCode}</p>}
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
+                                      );
+                                    })}
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
-                          
-                          {/* Summary of value adjustments */}
-                          <div className="mt-4 pt-4 border-t">
-                            <p className="text-xs font-medium text-muted-foreground mb-2">TOTAL EQUIPMENT VALUE ADJUSTMENTS</p>
-                            <div className="grid grid-cols-3 gap-4 text-sm">
-                              <div>
-                                <p className="text-muted-foreground">VIN Options Trade-In</p>
-                                <p className="font-semibold text-green-600">
-                                  +${getLatestBookout('jdpower')!.vinOptionsTradeIn?.toLocaleString() || '0'}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">VIN Options Retail</p>
-                                <p className="font-semibold text-green-600">
-                                  +${getLatestBookout('jdpower')!.vinOptionsRetail?.toLocaleString() || '0'}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">VIN Options Loan</p>
-                                <p className="font-semibold text-green-600">
-                                  +${getLatestBookout('jdpower')!.vinOptionsLoan?.toLocaleString() || '0'}
-                                </p>
+                              ))}
+                            </div>
+                            
+                            {/* Equipment Value Summary */}
+                            <div className="mt-6 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950 dark:to-blue-950 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                              <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Equipment Value Summary</h5>
+                              <div className="grid grid-cols-3 gap-4">
+                                <div className="text-center">
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 uppercase font-medium">Trade-In Adjustment</p>
+                                  <p className="text-xl font-bold text-green-600">
+                                    +${getLatestBookout('jdpower')!.vinOptionsTradeIn?.toLocaleString() || '0'}
+                                  </p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 uppercase font-medium">Retail Adjustment</p>
+                                  <p className="text-xl font-bold text-green-600">
+                                    +${getLatestBookout('jdpower')!.vinOptionsRetail?.toLocaleString() || '0'}
+                                  </p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 uppercase font-medium">Loan Adjustment</p>
+                                  <p className="text-xl font-bold text-green-600">
+                                    +${getLatestBookout('jdpower')!.vinOptionsLoan?.toLocaleString() || '0'}
+                                  </p>
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
                       )}
                       
-                      {/* Request Info */}
-                      <div className="p-4 border-t text-xs text-muted-foreground">
-                        <p>Request ID: {getLatestBookout('jdpower')!.requestId}</p>
-                        <p>UCG Vehicle ID: {getLatestBookout('jdpower')!.ucgVehicleId}</p>
+                      {/* Footer - Report Details */}
+                      <div className="bg-gray-50 dark:bg-gray-900 rounded-b-lg p-6 border-t">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-gray-100 mb-1">Report Information</p>
+                            <p className="text-xs text-gray-500">Request ID: {getLatestBookout('jdpower')!.requestId}</p>
+                            <p className="text-xs text-gray-500">UCG Vehicle ID: {getLatestBookout('jdpower')!.ucgVehicleId}</p>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-gray-100 mb-1">Generated</p>
+                            <p className="text-xs text-gray-500">{new Date(getLatestBookout('jdpower')!.createdAt).toLocaleString()}</p>
+                            <p className="text-xs text-gray-500">Via J.D. Power Valuation API</p>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-gray-100 mb-1">Disclaimer</p>
+                            <p className="text-xs text-gray-500">Values are estimates based on market data and vehicle condition. Actual trade-in values may vary.</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -739,16 +890,6 @@ export default function VehicleDetailsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="ai-comparison">
-          <Card>
-            <CardHeader>
-              <CardTitle>AI Comparison</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">AI-powered vehicle comparison insights will be available soon.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

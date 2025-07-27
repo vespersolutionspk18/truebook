@@ -1,0 +1,1212 @@
+
+> tbai@0.1.0 dev
+> next dev --turbopack
+
+   ▲ Next.js 15.1.7 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://127.0.2.2:3000
+   - Environments: .env
+
+ ✓ Starting...
+ ✓ Compiled in 160ms
+ ✓ Ready in 949ms
+ ⚠ Webpack is configured while Turbopack is not, which may cause problems.
+ ⚠ See instructions if you need to configure Turbopack:
+  https://nextjs.org/docs/app/api-reference/next-config-js/turbo
+
+ ○ Compiling /api/auth/[...nextauth] ...
+Redirecting to: http://localhost:3000
+JWT token: {
+  name: 'Hassan',
+  email: 'h@h.com',
+  picture: null,
+  sub: 'cmdk189we0000jlacnu5a9iel',
+  id: 'cmdk189we0000jlacnu5a9iel',
+  image: null,
+  iat: 1753606573,
+  exp: 1754211373,
+  jti: '5a17af98-a41b-4ef8-9ac6-b8892cf9747f'
+}
+Session: {
+  user: {
+    name: 'Hassan',
+    email: 'h@h.com',
+    image: null,
+    id: 'cmdk189we0000jlacnu5a9iel'
+  },
+  expires: '2025-08-03T09:01:30.094Z'
+}
+ GET /api/auth/session 200 in 1711ms
+Redirecting to: http://localhost:3000
+JWT token: {
+  name: 'Hassan',
+  email: 'h@h.com',
+  picture: null,
+  sub: 'cmdk189we0000jlacnu5a9iel',
+  id: 'cmdk189we0000jlacnu5a9iel',
+  image: null,
+  iat: 1753606890,
+  exp: 1754211690,
+  jti: 'da7af85c-4c29-452d-952c-02374d3bbb91'
+}
+Session: {
+  user: {
+    name: 'Hassan',
+    email: 'h@h.com',
+    image: null,
+    id: 'cmdk189we0000jlacnu5a9iel'
+  },
+  expires: '2025-08-03T09:01:30.243Z'
+}
+ GET /api/user/settings 200 in 182ms
+Redirecting to: http://localhost:3000
+Redirecting to: http://localhost:3000
+JWT token: {
+  name: 'Hassan',
+  email: 'h@h.com',
+  picture: null,
+  sub: 'cmdk189we0000jlacnu5a9iel',
+  id: 'cmdk189we0000jlacnu5a9iel',
+  image: null,
+  iat: 1753606890,
+  exp: 1754211690,
+  jti: 'da7af85c-4c29-452d-952c-02374d3bbb91'
+}
+Session: {
+  user: {
+    name: 'Hassan',
+    email: 'h@h.com',
+    image: null,
+    id: 'cmdk189we0000jlacnu5a9iel'
+  },
+  expires: '2025-08-03T09:01:33.028Z'
+}
+JWT token: {
+  name: 'Hassan',
+  email: 'h@h.com',
+  picture: null,
+  sub: 'cmdk189we0000jlacnu5a9iel',
+  id: 'cmdk189we0000jlacnu5a9iel',
+  image: null,
+  iat: 1753606890,
+  exp: 1754211690,
+  jti: 'da7af85c-4c29-452d-952c-02374d3bbb91'
+}
+Session: {
+  user: {
+    name: 'Hassan',
+    email: 'h@h.com',
+    image: null,
+    id: 'cmdk189we0000jlacnu5a9iel'
+  },
+  expires: '2025-08-03T09:01:33.028Z'
+}
+ GET /api/vehicles/484831a8-6820-445a-b5ba-395de2a67c42/ai-validation/cmdlg0b650017jlt8qaunulik/comparison 200 in 665ms
+ GET /api/vehicles/484831a8-6820-445a-b5ba-395de2a67c42/ai-validation/cmdlg0b650017jlt8qaunulik/comparison 200 in 665ms
+ ✓ Compiled /api/auth/[...nextauth] in 4.8s
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 5091ms
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 20ms
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 37ms
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 21ms
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 26ms
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 23ms
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 21ms
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 22ms
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 21ms
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 25ms
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 24ms
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 20ms
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 34ms
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 20ms
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 21ms
+ GET /dashboard/vehicle/484831a8-6820-445a-b5ba-395de2a67c42 200 in 32ms
+ ✓ Compiled in 73ms
+ ✓ Compiled in 64ms
+ ✓ Compiled in 61ms
+ ✓ Compiled in 58ms
+Redirecting to: http://localhost:3000
+JWT token: {
+  name: 'Hassan',
+  email: 'h@h.com',
+  picture: null,
+  sub: 'cmdk189we0000jlacnu5a9iel',
+  id: 'cmdk189we0000jlacnu5a9iel',
+  image: null,
+  iat: 1753606890,
+  exp: 1754211690,
+  jti: 'da7af85c-4c29-452d-952c-02374d3bbb91'
+}
+Session: {
+  user: {
+    name: 'Hassan',
+    email: 'h@h.com',
+    image: null,
+    id: 'cmdk189we0000jlacnu5a9iel'
+  },
+  expires: '2025-08-03T09:11:43.118Z'
+}
+ GET /api/auth/session 200 in 43ms
+Redirecting to: http://localhost:3000
+JWT token: {
+  name: 'Hassan',
+  email: 'h@h.com',
+  picture: null,
+  sub: 'cmdk189we0000jlacnu5a9iel',
+  id: 'cmdk189we0000jlacnu5a9iel',
+  image: null,
+  iat: 1753607503,
+  exp: 1754212303,
+  jti: '7f932419-6700-4b4e-80ef-c967d3e4db14'
+}
+Session: {
+  user: {
+    name: 'Hassan',
+    email: 'h@h.com',
+    image: null,
+    id: 'cmdk189we0000jlacnu5a9iel'
+  },
+  expires: '2025-08-03T09:11:43.163Z'
+}
+ GET /api/user/settings 200 in 39ms
+Redirecting to: http://localhost:3000
+JWT token: {
+  name: 'Hassan',
+  email: 'h@h.com',
+  picture: null,
+  sub: 'cmdk189we0000jlacnu5a9iel',
+  id: 'cmdk189we0000jlacnu5a9iel',
+  image: null,
+  iat: 1753607503,
+  exp: 1754212303,
+  jti: '7f932419-6700-4b4e-80ef-c967d3e4db14'
+}
+Session: {
+  user: {
+    name: 'Hassan',
+    email: 'h@h.com',
+    image: null,
+    id: 'cmdk189we0000jlacnu5a9iel'
+  },
+  expires: '2025-08-03T09:11:51.116Z'
+}
+ GET /api/auth/session 200 in 38ms
+Redirecting to: http://localhost:3000
+JWT token: {
+  name: 'Hassan',
+  email: 'h@h.com',
+  picture: null,
+  sub: 'cmdk189we0000jlacnu5a9iel',
+  id: 'cmdk189we0000jlacnu5a9iel',
+  image: null,
+  iat: 1753607511,
+  exp: 1754212311,
+  jti: '212a30b0-3372-4a35-83e7-aaf58844c591'
+}
+Session: {
+  user: {
+    name: 'Hassan',
+    email: 'h@h.com',
+    image: null,
+    id: 'cmdk189we0000jlacnu5a9iel'
+  },
+  expires: '2025-08-03T09:11:51.152Z'
+}
+ GET /api/user/settings 200 in 27ms
+Redirecting to: http://localhost:3000
+JWT token: {
+  name: 'Hassan',
+  email: 'h@h.com',
+  picture: null,
+  sub: 'cmdk189we0000jlacnu5a9iel',
+  id: 'cmdk189we0000jlacnu5a9iel',
+  image: null,
+  iat: 1753607511,
+  exp: 1754212311,
+  jti: '212a30b0-3372-4a35-83e7-aaf58844c591'
+}
+Session: {
+  user: {
+    name: 'Hassan',
+    email: 'h@h.com',
+    image: null,
+    id: 'cmdk189we0000jlacnu5a9iel'
+  },
+  expires: '2025-08-03T09:11:54.630Z'
+}
+ GET /api/auth/session 200 in 44ms
+Redirecting to: http://localhost:3000
+JWT token: {
+  name: 'Hassan',
+  email: 'h@h.com',
+  picture: null,
+  sub: 'cmdk189we0000jlacnu5a9iel',
+  id: 'cmdk189we0000jlacnu5a9iel',
+  image: null,
+  iat: 1753607514,
+  exp: 1754212314,
+  jti: 'aff1194c-6644-481a-b536-212125b42fc1'
+}
+Session: {
+  user: {
+    name: 'Hassan',
+    email: 'h@h.com',
+    image: null,
+    id: 'cmdk189we0000jlacnu5a9iel'
+  },
+  expires: '2025-08-03T09:11:54.666Z'
+}
+ GET /api/user/settings 200 in 26ms
+ ✓ Compiled /api/vehicles/[uuid]/bookout/jdpower in 225ms
+POST /api/vehicles/[uuid]/bookout/jdpower - UUID: 484831a8-6820-445a-b5ba-395de2a67c42
+Redirecting to: http://localhost:3000
+JWT token: {
+  name: 'Hassan',
+  email: 'h@h.com',
+  picture: null,
+  sub: 'cmdk189we0000jlacnu5a9iel',
+  id: 'cmdk189we0000jlacnu5a9iel',
+  image: null,
+  iat: 1753607514,
+  exp: 1754212314,
+  jti: 'aff1194c-6644-481a-b536-212125b42fc1'
+}
+Session: {
+  user: {
+    name: 'Hassan',
+    email: 'h@h.com',
+    image: null,
+    id: 'cmdk189we0000jlacnu5a9iel'
+  },
+  expires: '2025-08-03T09:11:58.046Z'
+}
+Fetching JD Power valuation for: { vin: '1G1ZD5ST1NF172292', mileage: 57780, region: 1 }
+Valuation response: {
+  "requestId": "p9ma45du48oe1ahcmjygld",
+  "result": [
+    {
+      "modelyear": "2022",
+      "make": "Chevrolet",
+      "model": "Malibu",
+      "body": "Sedan 4D LT 1.5L I4 Turbo",
+      "ucgvehicleid": "202209698",
+      "vehicletype": "Car",
+      "mileageclass": "2",
+      "basemsrp": "26800",
+      "bodytype": "Sedan",
+      "doors": "4",
+      "trim": "LT",
+      "trim2": "N/A",
+      "drivetype": "FWD",
+      "liters": "1.5",
+      "engineconfiguration": "I",
+      "cylinders": "4",
+      "inductiontype": "Turbo",
+      "transmission": "N/A",
+      "fueltype": "Gas",
+      "wheels": "4",
+      "curbweight": "3159",
+      "gvw": null,
+      "gcw": null,
+      "ucgsubsegment": "Midsize Car",
+      "modelnumber": "ZD5",
+      "rollupvehicleid": "202209698",
+      "basecleantrade": "16025",
+      "baseaveragetrade": "14975",
+      "baseroughtrade": "13675",
+      "basecleanretail": "21825",
+      "baseloan": "14425",
+      "averagemileage": "52500",
+      "mileageadjustment": "-500",
+      "vinoptionstrade": "0",
+      "vinoptionsretail": "0",
+      "vinoptionsloan": "0",
+      "adjustedcleantrade": "15525",
+      "adjustedaveragetrade": "14475",
+      "adjustedroughtrade": "13175",
+      "adjustedcleanretail": "21325",
+      "adjustedloan": "13925",
+      "maxmileageadj": "8013",
+      "minmileageadj": "-6410",
+      "minadjretail": "420",
+      "minadjcleantrade": "120",
+      "minadjaveragetrade": "120",
+      "minadjroughtrade": "120",
+      "minadjloan": "0",
+      "minadjretailforloan": "900",
+      "vid": "109020"
+    }
+  ],
+  "userinfo": "Default",
+  "authId": "Pure Ratings (1349316-545)"
+}
+Vehicle result data: {
+  "modelyear": "2022",
+  "make": "Chevrolet",
+  "model": "Malibu",
+  "body": "Sedan 4D LT 1.5L I4 Turbo",
+  "ucgvehicleid": "202209698",
+  "vehicletype": "Car",
+  "mileageclass": "2",
+  "basemsrp": "26800",
+  "bodytype": "Sedan",
+  "doors": "4",
+  "trim": "LT",
+  "trim2": "N/A",
+  "drivetype": "FWD",
+  "liters": "1.5",
+  "engineconfiguration": "I",
+  "cylinders": "4",
+  "inductiontype": "Turbo",
+  "transmission": "N/A",
+  "fueltype": "Gas",
+  "wheels": "4",
+  "curbweight": "3159",
+  "gvw": null,
+  "gcw": null,
+  "ucgsubsegment": "Midsize Car",
+  "modelnumber": "ZD5",
+  "rollupvehicleid": "202209698",
+  "basecleantrade": "16025",
+  "baseaveragetrade": "14975",
+  "baseroughtrade": "13675",
+  "basecleanretail": "21825",
+  "baseloan": "14425",
+  "averagemileage": "52500",
+  "mileageadjustment": "-500",
+  "vinoptionstrade": "0",
+  "vinoptionsretail": "0",
+  "vinoptionsloan": "0",
+  "adjustedcleantrade": "15525",
+  "adjustedaveragetrade": "14475",
+  "adjustedroughtrade": "13175",
+  "adjustedcleanretail": "21325",
+  "adjustedloan": "13925",
+  "maxmileageadj": "8013",
+  "minmileageadj": "-6410",
+  "minadjretail": "420",
+  "minadjcleantrade": "120",
+  "minadjaveragetrade": "120",
+  "minadjroughtrade": "120",
+  "minadjloan": "0",
+  "minadjretailforloan": "900",
+  "vid": "109020"
+}
+Redirecting to: http://localhost:3000
+JWT token: {
+  name: 'Hassan',
+  email: 'h@h.com',
+  picture: null,
+  sub: 'cmdk189we0000jlacnu5a9iel',
+  id: 'cmdk189we0000jlacnu5a9iel',
+  image: null,
+  iat: 1753607514,
+  exp: 1754212314,
+  jti: 'aff1194c-6644-481a-b536-212125b42fc1'
+}
+Session: {
+  user: {
+    name: 'Hassan',
+    email: 'h@h.com',
+    image: null,
+    id: 'cmdk189we0000jlacnu5a9iel'
+  },
+  expires: '2025-08-03T09:12:01.464Z'
+}
+ GET /api/auth/session 200 in 35ms
+Redirecting to: http://localhost:3000
+JWT token: {
+  name: 'Hassan',
+  email: 'h@h.com',
+  picture: null,
+  sub: 'cmdk189we0000jlacnu5a9iel',
+  id: 'cmdk189we0000jlacnu5a9iel',
+  image: null,
+  iat: 1753607521,
+  exp: 1754212321,
+  jti: '5f79607f-ab96-438d-9bc6-f32db2aedd68'
+}
+Session: {
+  user: {
+    name: 'Hassan',
+    email: 'h@h.com',
+    image: null,
+    id: 'cmdk189we0000jlacnu5a9iel'
+  },
+  expires: '2025-08-03T09:12:01.501Z'
+}
+ GET /api/user/settings 200 in 35ms
+Accessories data: {
+  "requestId": "tzem40sr2fqb1zoanxvsg",
+  "result": [
+    {
+      "accdesc": "Certified Pre-Owned",
+      "acccode": "00A",
+      "tradein": 0,
+      "retail": 1275,
+      "loan": 0,
+      "isincluded": 0,
+      "isadded": 0,
+      "accessorycategory": "CPO",
+      "includes": "",
+      "excludes": ""
+    },
+    {
+      "accdesc": "Leather Seats",
+      "acccode": "076",
+      "tradein": 425,
+      "retail": 475,
+      "loan": 425,
+      "isincluded": 0,
+      "isadded": 0,
+      "accessorycategory": "General",
+      "includes": "",
+      "excludes": ""
+    },
+    {
+      "accdesc": "Power Sunroof",
+      "acccode": "092",
+      "tradein": 425,
+      "retail": 475,
+      "loan": 425,
+      "isincluded": 0,
+      "isadded": 0,
+      "accessorycategory": "General",
+      "includes": "",
+      "excludes": ""
+    },
+    {
+      "accdesc": "Remote Engine Starter",
+      "acccode": "0D0",
+      "tradein": null,
+      "retail": null,
+      "loan": null,
+      "isincluded": 1,
+      "isadded": 0,
+      "accessorycategory": "General",
+      "includes": "",
+      "excludes": ""
+    },
+    {
+      "accdesc": "Driver Confidence #1 Pkg.",
+      "acccode": "0GJ",
+      "tradein": null,
+      "retail": null,
+      "loan": null,
+      "isincluded": 1,
+      "isadded": 0,
+      "accessorycategory": "Package",
+      "includes": "",
+      "excludes": ""
+    },
+    {
+      "accdesc": "Driver Confidence #2 Pkg.",
+      "acccode": "0GK",
+      "tradein": 450,
+      "retail": 500,
+      "loan": 450,
+      "isincluded": 0,
+      "isadded": 0,
+      "accessorycategory": "Package",
+      "includes": "",
+      "excludes": "0IO"
+    },
+    {
+      "accdesc": "W/out Driver Confidence #1 Pkg.",
+      "acccode": "0IO",
+      "tradein": -450,
+      "retail": -500,
+      "loan": -450,
+      "isincluded": 0,
+      "isadded": 0,
+      "accessorycategory": "Package",
+      "includes": "",
+      "excludes": "0GK"
+    }
+  ],
+  "userinfo": "Default",
+  "authId": "Pure Ratings (1349316-545)"
+}
+Accessories result array: [
+  {
+    accdesc: 'Certified Pre-Owned',
+    acccode: '00A',
+    tradein: 0,
+    retail: 1275,
+    loan: 0,
+    isincluded: 0,
+    isadded: 0,
+    accessorycategory: 'CPO',
+    includes: '',
+    excludes: ''
+  },
+  {
+    accdesc: 'Leather Seats',
+    acccode: '076',
+    tradein: 425,
+    retail: 475,
+    loan: 425,
+    isincluded: 0,
+    isadded: 0,
+    accessorycategory: 'General',
+    includes: '',
+    excludes: ''
+  },
+  {
+    accdesc: 'Power Sunroof',
+    acccode: '092',
+    tradein: 425,
+    retail: 475,
+    loan: 425,
+    isincluded: 0,
+    isadded: 0,
+    accessorycategory: 'General',
+    includes: '',
+    excludes: ''
+  },
+  {
+    accdesc: 'Remote Engine Starter',
+    acccode: '0D0',
+    tradein: null,
+    retail: null,
+    loan: null,
+    isincluded: 1,
+    isadded: 0,
+    accessorycategory: 'General',
+    includes: '',
+    excludes: ''
+  },
+  {
+    accdesc: 'Driver Confidence #1 Pkg.',
+    acccode: '0GJ',
+    tradein: null,
+    retail: null,
+    loan: null,
+    isincluded: 1,
+    isadded: 0,
+    accessorycategory: 'Package',
+    includes: '',
+    excludes: ''
+  },
+  {
+    accdesc: 'Driver Confidence #2 Pkg.',
+    acccode: '0GK',
+    tradein: 450,
+    retail: 500,
+    loan: 450,
+    isincluded: 0,
+    isadded: 0,
+    accessorycategory: 'Package',
+    includes: '',
+    excludes: '0IO'
+  },
+  {
+    accdesc: 'W/out Driver Confidence #1 Pkg.',
+    acccode: '0IO',
+    tradein: -450,
+    retail: -500,
+    loan: -450,
+    isincluded: 0,
+    isadded: 0,
+    accessorycategory: 'Package',
+    includes: '',
+    excludes: '0GK'
+  }
+]
+First accessory: {
+  accdesc: 'Certified Pre-Owned',
+  acccode: '00A',
+  tradein: 0,
+  retail: 1275,
+  loan: 0,
+  isincluded: 0,
+  isadded: 0,
+  accessorycategory: 'CPO',
+  includes: '',
+  excludes: ''
+}
+Deleted all previous JD Power bookouts for vehicle: 484831a8-6820-445a-b5ba-395de2a67c42
+Creating bookout with data: {
+  "vehicleId": "484831a8-6820-445a-b5ba-395de2a67c42",
+  "provider": "jdpower",
+  "mileage": 57780,
+  "region": 1,
+  "year": 2022,
+  "make": "Chevrolet",
+  "model": "Malibu",
+  "trim": "LT",
+  "trim2": null,
+  "bodyStyle": "Sedan 4D LT 1.5L I4 Turbo",
+  "bodyType": "Sedan",
+  "doors": 4,
+  "drivetrain": "FWD",
+  "engine": "1.5L I 4-cyl",
+  "transmission": null,
+  "fuelType": "Gas",
+  "vehicleType": "Car",
+  "ucgVehicleId": "202209698",
+  "ucgSubsegment": "Midsize Car",
+  "modelNumber": "ZD5",
+  "liters": "1.5",
+  "cylinders": 4,
+  "curbWeight": 3159,
+  "baseMsrp": 26800,
+  "baseCleanTradeIn": 16025,
+  "baseAverageTradeIn": 14975,
+  "baseRoughTradeIn": 13675,
+  "baseCleanRetail": 21825,
+  "baseLoanValue": 14425,
+  "cleanTradeIn": 15525,
+  "averageTradeIn": 14475,
+  "roughTradeIn": 13175,
+  "cleanRetail": 21325,
+  "loanValue": 13925,
+  "mileageAdjustment": -500,
+  "averageMileage": 52500,
+  "maxMileageAdj": 8013,
+  "minMileageAdj": -6410,
+  "mileageClass": "2",
+  "vinOptionsTradeIn": 0,
+  "vinOptionsRetail": 0,
+  "vinOptionsLoan": 0,
+  "minAdjRetail": 420,
+  "minAdjCleanTrade": 120,
+  "minAdjAverageTrade": 120,
+  "minAdjRoughTrade": 120,
+  "minAdjLoan": 0,
+  "minAdjRetailForLoan": 900,
+  "vid": "109020",
+  "rollupVehicleId": "202209698",
+  "requestId": "p9ma45du48oe1ahcmjygld",
+  "authId": "Pure Ratings (1349316-545)",
+  "rawData": {
+    "valuation": {
+      "requestId": "p9ma45du48oe1ahcmjygld",
+      "result": [
+        {
+          "modelyear": "2022",
+          "make": "Chevrolet",
+          "model": "Malibu",
+          "body": "Sedan 4D LT 1.5L I4 Turbo",
+          "ucgvehicleid": "202209698",
+          "vehicletype": "Car",
+          "mileageclass": "2",
+          "basemsrp": "26800",
+          "bodytype": "Sedan",
+          "doors": "4",
+          "trim": "LT",
+          "trim2": "N/A",
+          "drivetype": "FWD",
+          "liters": "1.5",
+          "engineconfiguration": "I",
+          "cylinders": "4",
+          "inductiontype": "Turbo",
+          "transmission": "N/A",
+          "fueltype": "Gas",
+          "wheels": "4",
+          "curbweight": "3159",
+          "gvw": null,
+          "gcw": null,
+          "ucgsubsegment": "Midsize Car",
+          "modelnumber": "ZD5",
+          "rollupvehicleid": "202209698",
+          "basecleantrade": "16025",
+          "baseaveragetrade": "14975",
+          "baseroughtrade": "13675",
+          "basecleanretail": "21825",
+          "baseloan": "14425",
+          "averagemileage": "52500",
+          "mileageadjustment": "-500",
+          "vinoptionstrade": "0",
+          "vinoptionsretail": "0",
+          "vinoptionsloan": "0",
+          "adjustedcleantrade": "15525",
+          "adjustedaveragetrade": "14475",
+          "adjustedroughtrade": "13175",
+          "adjustedcleanretail": "21325",
+          "adjustedloan": "13925",
+          "maxmileageadj": "8013",
+          "minmileageadj": "-6410",
+          "minadjretail": "420",
+          "minadjcleantrade": "120",
+          "minadjaveragetrade": "120",
+          "minadjroughtrade": "120",
+          "minadjloan": "0",
+          "minadjretailforloan": "900",
+          "vid": "109020"
+        }
+      ],
+      "userinfo": "Default",
+      "authId": "Pure Ratings (1349316-545)"
+    },
+    "accessories": {
+      "requestId": "tzem40sr2fqb1zoanxvsg",
+      "result": [
+        {
+          "accdesc": "Certified Pre-Owned",
+          "acccode": "00A",
+          "tradein": 0,
+          "retail": 1275,
+          "loan": 0,
+          "isincluded": 0,
+          "isadded": 0,
+          "accessorycategory": "CPO",
+          "includes": "",
+          "excludes": ""
+        },
+        {
+          "accdesc": "Leather Seats",
+          "acccode": "076",
+          "tradein": 425,
+          "retail": 475,
+          "loan": 425,
+          "isincluded": 0,
+          "isadded": 0,
+          "accessorycategory": "General",
+          "includes": "",
+          "excludes": ""
+        },
+        {
+          "accdesc": "Power Sunroof",
+          "acccode": "092",
+          "tradein": 425,
+          "retail": 475,
+          "loan": 425,
+          "isincluded": 0,
+          "isadded": 0,
+          "accessorycategory": "General",
+          "includes": "",
+          "excludes": ""
+        },
+        {
+          "accdesc": "Remote Engine Starter",
+          "acccode": "0D0",
+          "tradein": null,
+          "retail": null,
+          "loan": null,
+          "isincluded": 1,
+          "isadded": 0,
+          "accessorycategory": "General",
+          "includes": "",
+          "excludes": ""
+        },
+        {
+          "accdesc": "Driver Confidence #1 Pkg.",
+          "acccode": "0GJ",
+          "tradein": null,
+          "retail": null,
+          "loan": null,
+          "isincluded": 1,
+          "isadded": 0,
+          "accessorycategory": "Package",
+          "includes": "",
+          "excludes": ""
+        },
+        {
+          "accdesc": "Driver Confidence #2 Pkg.",
+          "acccode": "0GK",
+          "tradein": 450,
+          "retail": 500,
+          "loan": 450,
+          "isincluded": 0,
+          "isadded": 0,
+          "accessorycategory": "Package",
+          "includes": "",
+          "excludes": "0IO"
+        },
+        {
+          "accdesc": "W/out Driver Confidence #1 Pkg.",
+          "acccode": "0IO",
+          "tradein": -450,
+          "retail": -500,
+          "loan": -450,
+          "isincluded": 0,
+          "isadded": 0,
+          "accessorycategory": "Package",
+          "includes": "",
+          "excludes": "0GK"
+        }
+      ],
+      "userinfo": "Default",
+      "authId": "Pure Ratings (1349316-545)"
+    },
+    "vehicleResult": {
+      "modelyear": "2022",
+      "make": "Chevrolet",
+      "model": "Malibu",
+      "body": "Sedan 4D LT 1.5L I4 Turbo",
+      "ucgvehicleid": "202209698",
+      "vehicletype": "Car",
+      "mileageclass": "2",
+      "basemsrp": "26800",
+      "bodytype": "Sedan",
+      "doors": "4",
+      "trim": "LT",
+      "trim2": "N/A",
+      "drivetype": "FWD",
+      "liters": "1.5",
+      "engineconfiguration": "I",
+      "cylinders": "4",
+      "inductiontype": "Turbo",
+      "transmission": "N/A",
+      "fueltype": "Gas",
+      "wheels": "4",
+      "curbweight": "3159",
+      "gvw": null,
+      "gcw": null,
+      "ucgsubsegment": "Midsize Car",
+      "modelnumber": "ZD5",
+      "rollupvehicleid": "202209698",
+      "basecleantrade": "16025",
+      "baseaveragetrade": "14975",
+      "baseroughtrade": "13675",
+      "basecleanretail": "21825",
+      "baseloan": "14425",
+      "averagemileage": "52500",
+      "mileageadjustment": "-500",
+      "vinoptionstrade": "0",
+      "vinoptionsretail": "0",
+      "vinoptionsloan": "0",
+      "adjustedcleantrade": "15525",
+      "adjustedaveragetrade": "14475",
+      "adjustedroughtrade": "13175",
+      "adjustedcleanretail": "21325",
+      "adjustedloan": "13925",
+      "maxmileageadj": "8013",
+      "minmileageadj": "-6410",
+      "minadjretail": "420",
+      "minadjcleantrade": "120",
+      "minadjaveragetrade": "120",
+      "minadjroughtrade": "120",
+      "minadjloan": "0",
+      "minadjretailforloan": "900",
+      "vid": "109020"
+    }
+  }
+}
+Creating 7 accessories for bookout cmdlgn3rs0001jlwzlh9qhqlh
+Processing accessory 0: {
+  accdesc: 'Certified Pre-Owned',
+  acccode: '00A',
+  tradein: 0,
+  retail: 1275,
+  loan: 0,
+  isincluded: 0,
+  isadded: 0,
+  accessorycategory: 'CPO',
+  includes: '',
+  excludes: ''
+}
+Accessory 0 fields: [
+  'accdesc',
+  'acccode',
+  'tradein',
+  'retail',
+  'loan',
+  'isincluded',
+  'isadded',
+  'accessorycategory',
+  'includes',
+  'excludes'
+]
+Creating accessory with data: {
+  bookoutId: 'cmdlgn3rs0001jlwzlh9qhqlh',
+  code: '00A',
+  name: 'Certified Pre-Owned',
+  type: null,
+  category: 'CPO',
+  msrp: null,
+  cleanTradeAdj: 0,
+  averageTradeAdj: 0,
+  roughTradeAdj: 0,
+  cleanRetailAdj: 1275,
+  loanAdj: 0,
+  includesCode: null,
+  excludesCode: null,
+  isFactoryInstalled: false,
+  isSelected: false,
+  isAvailable: true
+}
+Processing accessory 1: {
+  accdesc: 'Leather Seats',
+  acccode: '076',
+  tradein: 425,
+  retail: 475,
+  loan: 425,
+  isincluded: 0,
+  isadded: 0,
+  accessorycategory: 'General',
+  includes: '',
+  excludes: ''
+}
+Accessory 1 fields: [
+  'accdesc',
+  'acccode',
+  'tradein',
+  'retail',
+  'loan',
+  'isincluded',
+  'isadded',
+  'accessorycategory',
+  'includes',
+  'excludes'
+]
+Creating accessory with data: {
+  bookoutId: 'cmdlgn3rs0001jlwzlh9qhqlh',
+  code: '076',
+  name: 'Leather Seats',
+  type: null,
+  category: 'General',
+  msrp: null,
+  cleanTradeAdj: 425,
+  averageTradeAdj: 425,
+  roughTradeAdj: 425,
+  cleanRetailAdj: 475,
+  loanAdj: 425,
+  includesCode: null,
+  excludesCode: null,
+  isFactoryInstalled: false,
+  isSelected: false,
+  isAvailable: true
+}
+Processing accessory 2: {
+  accdesc: 'Power Sunroof',
+  acccode: '092',
+  tradein: 425,
+  retail: 475,
+  loan: 425,
+  isincluded: 0,
+  isadded: 0,
+  accessorycategory: 'General',
+  includes: '',
+  excludes: ''
+}
+Accessory 2 fields: [
+  'accdesc',
+  'acccode',
+  'tradein',
+  'retail',
+  'loan',
+  'isincluded',
+  'isadded',
+  'accessorycategory',
+  'includes',
+  'excludes'
+]
+Creating accessory with data: {
+  bookoutId: 'cmdlgn3rs0001jlwzlh9qhqlh',
+  code: '092',
+  name: 'Power Sunroof',
+  type: null,
+  category: 'General',
+  msrp: null,
+  cleanTradeAdj: 425,
+  averageTradeAdj: 425,
+  roughTradeAdj: 425,
+  cleanRetailAdj: 475,
+  loanAdj: 425,
+  includesCode: null,
+  excludesCode: null,
+  isFactoryInstalled: false,
+  isSelected: false,
+  isAvailable: true
+}
+Processing accessory 3: {
+  accdesc: 'Remote Engine Starter',
+  acccode: '0D0',
+  tradein: null,
+  retail: null,
+  loan: null,
+  isincluded: 1,
+  isadded: 0,
+  accessorycategory: 'General',
+  includes: '',
+  excludes: ''
+}
+Accessory 3 fields: [
+  'accdesc',
+  'acccode',
+  'tradein',
+  'retail',
+  'loan',
+  'isincluded',
+  'isadded',
+  'accessorycategory',
+  'includes',
+  'excludes'
+]
+Creating accessory with data: {
+  bookoutId: 'cmdlgn3rs0001jlwzlh9qhqlh',
+  code: '0D0',
+  name: 'Remote Engine Starter',
+  type: null,
+  category: 'General',
+  msrp: null,
+  cleanTradeAdj: 0,
+  averageTradeAdj: 0,
+  roughTradeAdj: 0,
+  cleanRetailAdj: 0,
+  loanAdj: 0,
+  includesCode: null,
+  excludesCode: null,
+  isFactoryInstalled: true,
+  isSelected: true,
+  isAvailable: true
+}
+Processing accessory 4: {
+  accdesc: 'Driver Confidence #1 Pkg.',
+  acccode: '0GJ',
+  tradein: null,
+  retail: null,
+  loan: null,
+  isincluded: 1,
+  isadded: 0,
+  accessorycategory: 'Package',
+  includes: '',
+  excludes: ''
+}
+Accessory 4 fields: [
+  'accdesc',
+  'acccode',
+  'tradein',
+  'retail',
+  'loan',
+  'isincluded',
+  'isadded',
+  'accessorycategory',
+  'includes',
+  'excludes'
+]
+Creating accessory with data: {
+  bookoutId: 'cmdlgn3rs0001jlwzlh9qhqlh',
+  code: '0GJ',
+  name: 'Driver Confidence #1 Pkg.',
+  type: null,
+  category: 'Package',
+  msrp: null,
+  cleanTradeAdj: 0,
+  averageTradeAdj: 0,
+  roughTradeAdj: 0,
+  cleanRetailAdj: 0,
+  loanAdj: 0,
+  includesCode: null,
+  excludesCode: null,
+  isFactoryInstalled: true,
+  isSelected: true,
+  isAvailable: true
+}
+Processing accessory 5: {
+  accdesc: 'Driver Confidence #2 Pkg.',
+  acccode: '0GK',
+  tradein: 450,
+  retail: 500,
+  loan: 450,
+  isincluded: 0,
+  isadded: 0,
+  accessorycategory: 'Package',
+  includes: '',
+  excludes: '0IO'
+}
+Accessory 5 fields: [
+  'accdesc',
+  'acccode',
+  'tradein',
+  'retail',
+  'loan',
+  'isincluded',
+  'isadded',
+  'accessorycategory',
+  'includes',
+  'excludes'
+]
+Creating accessory with data: {
+  bookoutId: 'cmdlgn3rs0001jlwzlh9qhqlh',
+  code: '0GK',
+  name: 'Driver Confidence #2 Pkg.',
+  type: null,
+  category: 'Package',
+  msrp: null,
+  cleanTradeAdj: 450,
+  averageTradeAdj: 450,
+  roughTradeAdj: 450,
+  cleanRetailAdj: 500,
+  loanAdj: 450,
+  includesCode: null,
+  excludesCode: '0IO',
+  isFactoryInstalled: false,
+  isSelected: false,
+  isAvailable: true
+}
+Processing accessory 6: {
+  accdesc: 'W/out Driver Confidence #1 Pkg.',
+  acccode: '0IO',
+  tradein: -450,
+  retail: -500,
+  loan: -450,
+  isincluded: 0,
+  isadded: 0,
+  accessorycategory: 'Package',
+  includes: '',
+  excludes: '0GK'
+}
+Accessory 6 fields: [
+  'accdesc',
+  'acccode',
+  'tradein',
+  'retail',
+  'loan',
+  'isincluded',
+  'isadded',
+  'accessorycategory',
+  'includes',
+  'excludes'
+]
+Creating accessory with data: {
+  bookoutId: 'cmdlgn3rs0001jlwzlh9qhqlh',
+  code: '0IO',
+  name: 'W/out Driver Confidence #1 Pkg.',
+  type: null,
+  category: 'Package',
+  msrp: null,
+  cleanTradeAdj: -450,
+  averageTradeAdj: -450,
+  roughTradeAdj: -450,
+  cleanRetailAdj: -500,
+  loanAdj: -450,
+  includesCode: null,
+  excludesCode: '0GK',
+  isFactoryInstalled: false,
+  isSelected: false,
+  isAvailable: true
+}
+Created 7 accessories
+Calculated equipment totals from stored accessories: {
+  totalTradeIn: 850,
+  totalRetail: 2225,
+  totalLoan: 850,
+  accessoryCount: 7
+}
+ POST /api/vehicles/484831a8-6820-445a-b5ba-395de2a67c42/bookout/jdpower 200 in 4507ms
+ ✓ Compiled /api/vehicles/[uuid] in 137ms
+Redirecting to: http://localhost:3000
+JWT token: {
+  name: 'Hassan',
+  email: 'h@h.com',
+  picture: null,
+  sub: 'cmdk189we0000jlacnu5a9iel',
+  id: 'cmdk189we0000jlacnu5a9iel',
+  image: null,
+  iat: 1753607521,
+  exp: 1754212321,
+  jti: '5f79607f-ab96-438d-9bc6-f32db2aedd68'
+}
+Session: {
+  user: {
+    name: 'Hassan',
+    email: 'h@h.com',
+    image: null,
+    id: 'cmdk189we0000jlacnu5a9iel'
+  },
+  expires: '2025-08-03T09:12:02.536Z'
+}
+ GET /api/vehicles/484831a8-6820-445a-b5ba-395de2a67c42 200 in 571ms
+[?25h
