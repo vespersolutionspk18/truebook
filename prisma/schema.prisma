@@ -20,21 +20,147 @@ enum UserRole {
   EMPLOYEE
 }
 
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum PlanType {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+model Organization {
+  id                 String               @id @default(cuid())
+  name               String
+  slug               String               @unique
+  logo               String?
+  
+  // Plan info (simplified - no payments)
+  plan               PlanType             @default(FREE)
+  
+  // Settings
+  settings           Json?
+  
+  // Metadata
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  
+  // Relations
+  users              OrganizationUser[]
+  invitations        Invitation[]
+  apiKeys            ApiKey[]
+  usageRecords       UsageRecord[]
+  vehicles           Vehicle[]
+  auditLogs          AuditLog[]
+  featureFlags       OrganizationFeatureFlag[]
+  
+  @@index([slug])
+  @@index([plan])
+}
+
+model OrganizationUser {
+  id              String       @id @default(cuid())
+  organizationId  String
+  userId          String
+  role            OrgRole      @default(MEMBER)
+  joinedAt        DateTime     @default(now())
+  
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+model Invitation {
+  id              String       @id @default(cuid())
+  organizationId  String
+  email           String
+  role            OrgRole      @default(MEMBER)
+  token           String       @unique @default(cuid())
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdBy       String
+  createdAt       DateTime     @default(now())
+  
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([email])
+  @@index([token])
+  @@index([organizationId])
+}
+
+model ApiKey {
+  id              String       @id @default(cuid())
+  key             String       @unique
+  name            String
+  organizationId  String
+  permissions     String[]
+  rateLimit       Int          @default(1000)
+  lastUsedAt      DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime     @default(now())
+  
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([key])
+  @@index([organizationId])
+}
+
+model UsageRecord {
+  id              String       @id @default(cuid())
+  organizationId  String
+  feature         String       // "api_calls", "vehicle_lookups", "bookouts", etc.
+  count           Int          @default(1)
+  metadata        Json?
+  timestamp       DateTime     @default(now())
+  
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId, feature, timestamp])
+  @@index([timestamp])
+}
+
+model AuditLog {
+  id              String       @id @default(cuid())
+  organizationId  String
+  userId          String
+  action          String       // "user.login", "vehicle.create", etc.
+  resource        String?      // Resource ID affected
+  metadata        Json?        // Additional context
+  ipAddress       String
+  userAgent       String
+  timestamp       DateTime     @default(now())
+  
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId, timestamp])
+  @@index([userId, timestamp])
+  @@index([action])
+}
+
 model User {
-  id                String               @id @default(cuid())
-  name              String?
-  email             String?              @unique
-  emailVerified     DateTime?
-  image             String?
-  password          String?
-  role              UserRole             @default(EMPLOYEE)
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  accounts          Account[]
-  sessions          Session[]
-  vehicles          Vehicle[]
-  settings          Settings?
+  id                  String               @id @default(cuid())
+  name                String?
+  email               String?              @unique
+  emailVerified       DateTime?
+  image               String?
+  password            String?
+  role                UserRole             @default(EMPLOYEE)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  
+  // Relations
+  accounts            Account[]
+  sessions            Session[]
+  settings            Settings?
   monroneyCredentials MonroneyCredentials?
+  organizations       OrganizationUser[]
 }
 
 model Settings {
@@ -85,19 +211,25 @@ model LoginAttempt {
 }
 
 model Vehicle {
-  uuid         String        @id @default(uuid())
-  vin          String        @unique
-  mileage      Int?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  userId       String
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  vehiclePairs VehiclePair[]
-  monroney     Monroney?
-  neoVin       NeoVin?
-  bookouts     Bookout[]
+  uuid           String        @id @default(uuid())
+  vin            String        
+  mileage        Int?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  
+  // Multi-tenancy
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Relations
+  vehiclePairs   VehiclePair[]
+  monroney       Monroney?
+  neoVin         NeoVin?
+  bookouts       Bookout[]
 
-  @@index([userId])
+  @@unique([organizationId, vin])
+  @@index([organizationId])
+  @@index([vin])
 }
 
 model VehiclePair {
@@ -539,4 +671,46 @@ model BookoutChangeLog {
   @@index([bookoutId])
   @@index([changeType])
   @@index([sequence])
+}
+
+// Feature Flags
+model FeatureFlag {
+  id                String                    @id @default(cuid())
+  key               String                    @unique
+  name              String
+  description       String?
+  defaultEnabled    Boolean                   @default(false)
+  
+  // Targeting rules
+  enabledForAll     Boolean                   @default(false)
+  percentage        Int?                      // Percentage rollout (0-100)
+  
+  // Metadata
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  
+  // Relations
+  organizationFlags OrganizationFeatureFlag[]
+  
+  @@index([key])
+}
+
+model OrganizationFeatureFlag {
+  id              String       @id @default(cuid())
+  organizationId  String
+  featureFlagId   String
+  enabled         Boolean
+  
+  // Override settings
+  metadata        Json?        // Custom configuration per org
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  featureFlag     FeatureFlag  @relation(fields: [featureFlagId], references: [id], onDelete: Cascade)
+  
+  @@unique([organizationId, featureFlagId])
+  @@index([organizationId])
+  @@index([featureFlagId])
 }

@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getServerSession } from 'next-auth';
+import { requireOrganization } from '@/lib/auth';
 
-export async function POST(request: Request) {
+export const POST = requireOrganization(async (req: NextRequest, context) => {
   try {
     // Ensure database is initialized
     if (!db) {
@@ -13,28 +13,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Get user ID from email
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true }
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    const data = await request.json();
+    const data = await req.json();
     const { vehicleId, vin, monroneyData } = data;
 
     if (!vehicleId || !vin || !monroneyData) {
@@ -44,11 +23,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify vehicle ownership
+    // Verify vehicle belongs to organization
     const vehicle = await db.vehicle.findUnique({
       where: {
         uuid: vehicleId,
-        userId: user.id
+        organizationId: context.organization.id
       }
     });
 
@@ -112,10 +91,8 @@ export async function POST(request: Request) {
       stack: error instanceof Error ? error.stack : undefined
     };
     
-    // Only try to access user and data if they are defined in this scope
-    if (typeof user !== 'undefined') {
-      errorData = { ...errorData, userId: user.id };
-    }
+    // Add context info to error data
+    errorData = { ...errorData, organizationId: context.organization.id, userId: context.user.id };
     
     if (typeof data !== 'undefined') {
       try {
@@ -170,4 +147,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

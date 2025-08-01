@@ -41,32 +41,46 @@ export default function VinLookupPage() {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include'
       });
       
-      const vehicleData = await checkResponse.json();
-      console.log('Database check response:', { status: checkResponse.status, data: vehicleData });
-
-      if (checkResponse.ok && vehicleData) {
-        console.log('Vehicle found in database:', vehicleData);
-        toast({
-          title: "Duplicate VIN Found",
-          description: "A vehicle with this VIN already exists in the database.",
-          variant: "destructive"
-        });
-        router.push(`/dashboard/vehicle/${vehicleData.uuid}`);
-        return;
-      }
+      console.log('Database check response status:', checkResponse.status);
       
+      // Handle different response statuses
       if (checkResponse.status === 401) {
-        console.log('Authentication error: User not logged in');
-        throw new Error('You must be logged in to check vehicles');
-      }
-
-      if (!checkResponse.ok && checkResponse.status !== 404) {
-        console.log('Error checking vehicle:', { status: checkResponse.status, message: vehicleData?.message });
-        const errorMessage = vehicleData?.message || 'Failed to check vehicle';
-        throw new Error(errorMessage);
+        console.log('User not authenticated, skipping database check');
+        // Don't redirect, just skip the check
+        // The NHTSA lookup will still work
+      } else if (checkResponse.status === 403) {
+        console.log('Organization required, skipping database check');
+        // The NHTSA lookup will still work
+      } else if (checkResponse.ok) {
+        const vehicleData = await checkResponse.json();
+        console.log('Database check response:', { status: checkResponse.status, data: vehicleData });
+        
+        // API returns null when vehicle not found
+        if (vehicleData && vehicleData.uuid) {
+          console.log('Vehicle found in database:', vehicleData);
+          toast({
+            title: "Duplicate VIN Found",
+            description: "A vehicle with this VIN already exists in the database.",
+            variant: "destructive"
+          });
+          router.push(`/dashboard/vehicle/${vehicleData.uuid}`);
+          return;
+        } else {
+          console.log('Vehicle not found in database (null response)');
+        }
+      } else {
+        // For other unexpected errors
+        console.error('Unexpected error status:', checkResponse.status);
+        try {
+          const errorData = await checkResponse.json();
+          console.error('Error data:', errorData);
+        } catch {
+          console.error('Failed to parse error response');
+        }
       }
 
       console.log('Vehicle not found in database, proceeding with NHTSA API call');
@@ -92,11 +106,23 @@ export default function VinLookupPage() {
     
     setIsSaving(true);
     try {
+      console.log('Saving vehicle with VIN:', vin);
+      console.log('Vehicle pairs count:', result.filter(item => 
+        item && 
+        typeof item.Value === 'string' && 
+        typeof item.Variable === 'string' && 
+        item.Value.trim() !== '' && 
+        item.Value !== '0' && 
+        item.Value !== 'Not Applicable' &&
+        item.Variable.trim() !== ''
+      ).length);
+      
       const createVehicleResponse = await fetch('/api/vehicles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           vin: vin,
           vehiclePairs: result
@@ -116,24 +142,40 @@ export default function VinLookupPage() {
         })
       });
 
+      console.log('Save vehicle response status:', createVehicleResponse.status);
+
       if (!createVehicleResponse.ok) {
-        const errorData = await createVehicleResponse.json();
+        let errorMessage = 'Failed to save vehicle';
+        try {
+          const errorData = await createVehicleResponse.json();
+          console.error('Save vehicle error:', errorData);
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (e) {
+          console.error('Failed to parse error response');
+        }
+        
         if (createVehicleResponse.status === 409) {
           throw new Error('A vehicle with this VIN already exists in your saved vehicles');
         } else if (createVehicleResponse.status === 401) {
           throw new Error('You must be logged in to save vehicles');
+        } else if (createVehicleResponse.status === 403) {
+          throw new Error('Organization context required. Please ensure you are logged in with an organization.');
         } else if (createVehicleResponse.status === 400) {
           throw new Error('Invalid vehicle data. Please check the VIN and try again');
         }
-        throw new Error(errorData.message || 'Failed to save vehicle');
+        throw new Error(errorMessage);
       }
+
+      // Parse the successful response
+      const savedVehicle = await createVehicleResponse.json();
+      console.log('Vehicle saved successfully:', savedVehicle);
 
       toast({
         title: "Success",
         description: "Vehicle saved to inventory successfully.",
       });
       
-      router.push('/dashboard/saved-vehicles');
+      router.push('/dashboard/inventory');
     } catch (error) {
       console.error('Error saving vehicle:', error);
       toast({

@@ -1,28 +1,14 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { NextResponse, NextRequest } from 'next/server';
+import { requireOrganization } from '@/lib/auth';
 import { db } from '@/lib/db';
+// import { logger, logError } from '@/lib/logger';
 
-export async function GET() {
+export const GET = requireOrganization(async (req, context) => {
   try {
-    const session = await getServerSession();
-    
-    if (!session?.user?.email) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true }
-    });
-
-    if (!user) {
-      return new NextResponse('User not found', { status: 404 });
-    }
-
-    // Get user's vehicles
+    // Get organization's vehicles
     const vehicles = await db.vehicle.findMany({
       where: {
-        userId: user.id
+        organizationId: context.organization.id
       },
       include: {
         vehiclePairs: true
@@ -32,42 +18,59 @@ export async function GET() {
       }
     });
 
+    // Track usage
+    await db.usageRecord.create({
+      data: {
+        organizationId: context.organization.id,
+        feature: 'vehicle_list',
+        metadata: { count: vehicles.length }
+      }
+    });
+
     return NextResponse.json(vehicles);
   } catch (error) {
-    console.error('Error fetching vehicles:', error);
+    console.log('GET /api/vehicles error occurred');
+    if (error instanceof Error) {
+      console.log('Error message:', error.message);
+    }
     return new NextResponse('Internal Server Error', { status: 500 });
   }
-}
+});
 
-export async function POST(req: Request) {
+export const POST = requireOrganization(async (req, context) => {
   try {
-    const session = await getServerSession();
-    
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { message: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const { vin, vehiclePairs } = await req.json();
+    const body = await req.json();
+    console.log('POST /api/vehicles - Request body:', JSON.stringify(body, null, 2));
+    const { vin, vehiclePairs, mileage } = body;
 
     if (!vin || !vehiclePairs || !Array.isArray(vehiclePairs)) {
+      console.error('Invalid request data:', { vin: !!vin, vehiclePairs: !!vehiclePairs, isArray: Array.isArray(vehiclePairs) });
       return NextResponse.json(
         { message: 'Invalid request data' },
         { status: 400 }
       );
     }
 
-    // Get user ID from email
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true }
-    });
+    // Remove limits for now - fuck the limits
+    // const vehicleCount = await db.vehicle.count({
+    //   where: { organizationId: context.organization.id }
+    // });
 
-    if (!user) {
-      return new NextResponse('User not found', { status: 404 });
-    }
+    // const limits = {
+    //   FREE: 5,
+    //   BRONZE: 20,
+    //   SILVER: 100,
+    //   GOLD: 500,
+    //   ENTERPRISE: -1 // unlimited
+    // };
+
+    // const limit = limits[context.organization.plan as keyof typeof limits];
+    // if (limit !== -1 && vehicleCount >= limit) {
+    //   return NextResponse.json(
+    //     { message: `Vehicle limit reached for ${context.organization.plan} plan` },
+    //     { status: 403 }
+    //   );
+    // }
 
     // Validate and sanitize vehiclePairs data
     const sanitizedPairs = vehiclePairs
@@ -91,45 +94,151 @@ export async function POST(req: Request) {
 
     // Create vehicle with pairs in a transaction
     const vehicle = await db.$transaction(async (tx) => {
-      // Check if VIN already exists
+      // Check if VIN already exists in this organization
+      console.log('Checking for existing vehicle...');
       const existingVehicle = await tx.vehicle.findUnique({
-        where: { vin }
+        where: {
+          organizationId_vin: {
+            organizationId: context.organization.id,
+            vin
+          }
+        }
       });
     
       if (existingVehicle) {
-        throw new Error('Vehicle with this VIN already exists');
+        throw new Error('Vehicle with this VIN already exists in your organization');
+      }
+      
+      // Also check if VIN exists in Monroney or NeoVin tables (they have global unique constraints)
+      console.log('Checking for existing Monroney...');
+      const existingMonroney = await tx.monroney.findUnique({
+        where: { vin }
+      });
+      
+      if (existingMonroney) {
+        console.log('Found existing Monroney with VIN:', vin);
+        throw new Error('A vehicle with this VIN already has Monroney data');
+      }
+      
+      console.log('Checking for existing NeoVin...');
+      const existingNeoVin = await tx.neoVin.findUnique({
+        where: { vin }
+      });
+      
+      if (existingNeoVin) {
+        console.log('Found existing NeoVin with VIN:', vin);
+        throw new Error('A vehicle with this VIN already has NeoVin data');
       }
     
-      // Create vehicle with all valid pairs
-      const vehicleData = {
+      // Create vehicle first without pairs
+      console.log('Creating vehicle with data:', {
         vin,
-        userId: user.id,
-        vehiclePairs: {
-          create: sanitizedPairs
+        mileage: mileage || null,
+        organizationId: context.organization.id,
+        pairsCount: sanitizedPairs.length,
+        firstPair: sanitizedPairs[0]
+      });
+      
+      let newVehicle;
+      try {
+        // Create vehicle without pairs first
+        newVehicle = await tx.vehicle.create({
+          data: {
+            vin,
+            mileage: mileage || null,
+            organizationId: context.organization.id
+          }
+        });
+        console.log('Vehicle created with UUID:', newVehicle.uuid);
+        
+        // Then create pairs separately
+        if (sanitizedPairs.length > 0) {
+          console.log('Creating vehicle pairs...');
+          await tx.vehiclePair.createMany({
+            data: sanitizedPairs.map(pair => ({
+              ...pair,
+              vehicleId: newVehicle.uuid
+            }))
+          });
+          console.log('Vehicle pairs created successfully');
         }
-      };
+        
+        // Fetch the complete vehicle with pairs
+        newVehicle = await tx.vehicle.findUnique({
+          where: { uuid: newVehicle.uuid },
+          include: { vehiclePairs: true }
+        });
+      } catch (createError) {
+        console.log('Error creating vehicle');
+        if (createError instanceof Error) {
+          console.log('Error type:', createError.constructor.name);
+          console.log('Error message:', createError.message);
+          console.log('Error stack:', createError.stack);
+        } else {
+          console.log('Unknown error:', JSON.stringify(createError, null, 2));
+        }
+        throw createError;
+      }
+      console.log('Vehicle created successfully:', newVehicle.uuid);
 
-      return await tx.vehicle.create({
-        data: vehicleData,
-        include: {
-          vehiclePairs: true
+      // Track usage
+      console.log('Creating usage record...');
+      await tx.usageRecord.create({
+        data: {
+          organizationId: context.organization.id,
+          feature: 'vehicle_create',
+          metadata: { vin: vin || 'unknown' }
         }
       });
+      console.log('Usage record created');
+
+      // Audit log
+      console.log('Creating audit log...');
+      const auditData = {
+        organizationId: context.organization.id,
+        userId: context.user.id,
+        action: 'vehicle.created',
+        resource: newVehicle.uuid,
+        metadata: { vin: vin || 'unknown' },
+        ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
+        userAgent: req.headers.get('user-agent') || 'unknown'
+      };
+      console.log('Audit data:', auditData);
+      await tx.auditLog.create({
+        data: auditData
+      });
+      console.log('Audit log created');
+
+      return newVehicle;
     });
+
+    // logger.info('Vehicle created', {
+    //   organizationId: context.organization.id,
+    //   userId: context.user.id,
+    //   vehicleId: vehicle.uuid,
+    //   vin: vehicle.vin
+    // });
 
     return NextResponse.json(vehicle);
   } catch (error) {
-    console.error('Error creating vehicle:', error);
+    // Safely log the error
+    console.log('POST /api/vehicles error occurred');
     if (error instanceof Error) {
-      const status = error.message === 'Vehicle with this VIN already exists' ? 409 : 500;
+      console.log('Error message:', error.message);
+      console.log('Error stack:', error.stack);
+      const status = error.message.includes('already exists') ? 409 : 500;
       return NextResponse.json(
         { message: error.message },
         { status }
       );
+    } else {
+      console.log('Unknown error type:', typeof error);
+      console.log('Error stringified:', JSON.stringify(error, null, 2));
     }
+    
     return NextResponse.json(
       { message: 'An unexpected error occurred while creating the vehicle' },
       { status: 500 }
     );
   }
-}
+});

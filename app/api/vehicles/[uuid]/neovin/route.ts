@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth-options';
 import { db } from '@/lib/db';
 
 export async function POST(
@@ -41,7 +41,11 @@ export async function POST(
 
     const marketCheckUrl = `https://api.marketcheck.com/v2/decode/car/neovin/${vehicle.vin}/specs?api_key=${apiKey}`;
     
+    console.log('Calling MarketCheck API:', marketCheckUrl.replace(apiKey, 'REDACTED'));
+    
     const marketCheckResponse = await fetch(marketCheckUrl);
+    
+    console.log('MarketCheck response status:', marketCheckResponse.status);
     
     if (!marketCheckResponse.ok) {
       const errorText = await marketCheckResponse.text();
@@ -52,9 +56,54 @@ export async function POST(
     }
 
     const marketCheckData = await marketCheckResponse.json();
+    
+    // Check if marketCheckData is valid
+    if (!marketCheckData || typeof marketCheckData !== 'object') {
+      console.error('Invalid MarketCheck response:', marketCheckData);
+      return NextResponse.json({ 
+        error: 'Invalid response from MarketCheck API',
+        details: 'Response was null or not an object'
+      }, { status: 500 });
+    }
+    
+    console.log('MarketCheck data received:', {
+      hasData: !!marketCheckData,
+      vin: marketCheckData.vin,
+      hasInteriorColor: !!marketCheckData.interior_color,
+      hasExteriorColor: !!marketCheckData.exterior_color,
+      hasRating: !!marketCheckData.rating,
+      hasWarranty: !!marketCheckData.warranty,
+      hasInstalledOptionsDetails: !!marketCheckData.installed_options_details,
+      hasFeatures: !!marketCheckData.features,
+      hasHighValueFeatures: !!marketCheckData.high_value_features,
+      hasInstalledEquipment: !!marketCheckData.installed_equipment
+    });
+    
+    // Log sample data to debug
+    if (marketCheckData.features) {
+      const firstFeatureKey = Object.keys(marketCheckData.features)[0];
+      if (firstFeatureKey) {
+        console.log('Sample feature:', {
+          optionCode: firstFeatureKey,
+          features: marketCheckData.features[firstFeatureKey]
+        });
+      }
+    }
+    
+    if (marketCheckData.installed_equipment) {
+      const firstEquipKey = Object.keys(marketCheckData.installed_equipment)[0];
+      if (firstEquipKey) {
+        console.log('Sample equipment:', {
+          optionCode: firstEquipKey,
+          equipment: marketCheckData.installed_equipment[firstEquipKey]
+        });
+      }
+    }
 
     // Create NeoVin record with all the data
-    const neoVin = await db.neoVin.create({
+    let neoVin;
+    try {
+      neoVin = await db.neoVin.create({
       data: {
         vehicleId: vehicle.uuid,
         vin: marketCheckData.vin,
@@ -96,50 +145,50 @@ export async function POST(
         optionsPackages: marketCheckData.options_packages,
         
         // Create related records
-        interiorColor: marketCheckData.interior_color ? {
+        interiorColor: marketCheckData.interior_color && typeof marketCheckData.interior_color === 'object' ? {
           create: {
-            code: marketCheckData.interior_color.code,
-            name: marketCheckData.interior_color.name,
-            confidence: marketCheckData.interior_color.confidence,
-            base: marketCheckData.interior_color.base,
+            code: marketCheckData.interior_color.code || null,
+            name: marketCheckData.interior_color.name || null,
+            confidence: marketCheckData.interior_color.confidence || null,
+            base: marketCheckData.interior_color.base || null,
           }
         } : undefined,
         
-        exteriorColor: marketCheckData.exterior_color ? {
+        exteriorColor: marketCheckData.exterior_color && typeof marketCheckData.exterior_color === 'object' ? {
           create: {
-            code: marketCheckData.exterior_color.code,
-            name: marketCheckData.exterior_color.name,
-            msrp: marketCheckData.exterior_color.msrp,
-            confidence: marketCheckData.exterior_color.confidence,
-            base: marketCheckData.exterior_color.base,
+            code: marketCheckData.exterior_color.code || null,
+            name: marketCheckData.exterior_color.name || null,
+            msrp: marketCheckData.exterior_color.msrp || null,
+            confidence: marketCheckData.exterior_color.confidence || null,
+            base: marketCheckData.exterior_color.base || null,
           }
         } : undefined,
         
-        rating: marketCheckData.rating ? {
+        rating: marketCheckData.rating && typeof marketCheckData.rating === 'object' ? {
           create: {
-            safetyFront: marketCheckData.rating.safety?.front,
-            safetySide: marketCheckData.rating.safety?.side,
-            safetyOverall: marketCheckData.rating.safety?.overall,
-            rollover: marketCheckData.rating.rollover,
-            roofStrength: marketCheckData.rating.roof_strength,
+            safetyFront: marketCheckData.rating.safety?.front || null,
+            safetySide: marketCheckData.rating.safety?.side || null,
+            safetyOverall: marketCheckData.rating.safety?.overall || null,
+            rollover: marketCheckData.rating.rollover || null,
+            roofStrength: marketCheckData.rating.roof_strength || null,
           }
         } : undefined,
         
-        warranty: marketCheckData.warranty ? {
+        warranty: marketCheckData.warranty && typeof marketCheckData.warranty === 'object' ? {
           create: {
-            totalDuration: marketCheckData.warranty.total?.duration,
-            totalDistance: marketCheckData.warranty.total?.distance,
-            powertrainDuration: marketCheckData.warranty.powertrain?.duration,
-            powertrainDistance: marketCheckData.warranty.powertrain?.distance,
-            antiCorrosionDuration: marketCheckData.warranty.anti_corrosion?.duration,
-            antiCorrosionDistance: marketCheckData.warranty.anti_corrosion?.distance,
-            roadsideAssistanceDuration: marketCheckData.warranty.roadside_assistance?.duration,
-            roadsideAssistanceDistance: marketCheckData.warranty.roadside_assistance?.distance,
+            totalDuration: marketCheckData.warranty.total?.duration || null,
+            totalDistance: marketCheckData.warranty.total?.distance || null,
+            powertrainDuration: marketCheckData.warranty.powertrain?.duration || null,
+            powertrainDistance: marketCheckData.warranty.powertrain?.distance || null,
+            antiCorrosionDuration: marketCheckData.warranty.anti_corrosion?.duration || null,
+            antiCorrosionDistance: marketCheckData.warranty.anti_corrosion?.distance || null,
+            roadsideAssistanceDuration: marketCheckData.warranty.roadside_assistance?.duration || null,
+            roadsideAssistanceDistance: marketCheckData.warranty.roadside_assistance?.distance || null,
           }
         } : undefined,
         
-        installedOptionsDetails: {
-          create: marketCheckData.installed_options_details?.map((option: { 
+        installedOptionsDetails: marketCheckData.installed_options_details && Array.isArray(marketCheckData.installed_options_details) ? {
+          create: marketCheckData.installed_options_details.map((option: { 
             code: string; 
             name: string; 
             msrp?: string; 
@@ -157,55 +206,61 @@ export async function POST(
             verified: option.verified,
             rule: option.rule,
             salePrice: option.sale_price,
-          })) || []
-        },
+          }))
+        } : undefined,
         
-        features: {
-          create: Object.entries(marketCheckData.features || {}).flatMap(([optionCode, features]: [string, Array<{ 
+        features: marketCheckData.features && Object.keys(marketCheckData.features).length > 0 ? {
+          create: Object.entries(marketCheckData.features).flatMap(([optionCode, features]: [string, Array<{ 
             category: string; 
             feature_type: string; 
             description: string 
           }>]) =>
-            features.map((feature) => ({
-              optionCode,
-              category: feature.category,
-              featureType: feature.feature_type,
-              description: feature.description,
-            }))
+            Array.isArray(features) ? features
+              .filter(feature => feature && feature.category && feature.feature_type && feature.description)
+              .map((feature) => ({
+                optionCode,
+                category: feature.category,
+                featureType: feature.feature_type,
+                description: feature.description,
+              })) : []
           )
-        },
+        } : undefined,
         
-        highValueFeatures: {
-          create: Object.entries(marketCheckData.high_value_features || {}).flatMap(([optionCode, features]: [string, Array<{ 
+        highValueFeatures: marketCheckData.high_value_features && Object.keys(marketCheckData.high_value_features).length > 0 ? {
+          create: Object.entries(marketCheckData.high_value_features).flatMap(([optionCode, features]: [string, Array<{ 
             category: string; 
             description: string 
           }>]) =>
-            features.map((feature) => ({
-              optionCode,
-              category: feature.category,
-              description: feature.description,
-            }))
+            Array.isArray(features) ? features
+              .filter(feature => feature && feature.category && feature.description)
+              .map((feature) => ({
+                optionCode,
+                category: feature.category,
+                description: feature.description,
+              })) : []
           )
-        },
+        } : undefined,
         
-        installedEquipment: {
-          create: Object.entries(marketCheckData.installed_equipment || {}).flatMap(([optionCode, equipment]: [string, Array<{ 
+        installedEquipment: marketCheckData.installed_equipment && Object.keys(marketCheckData.installed_equipment).length > 0 ? {
+          create: Object.entries(marketCheckData.installed_equipment).flatMap(([optionCode, equipment]: [string, Array<{ 
             category: string; 
             item: string; 
             attribute: string; 
             location?: string; 
             value: string 
           }>]) =>
-            equipment.map((item) => ({
-              optionCode,
-              category: item.category,
-              item: item.item,
-              attribute: item.attribute,
-              location: item.location || null,
-              value: item.value,
-            }))
+            Array.isArray(equipment) ? equipment
+              .filter(item => item && item.category && item.item && item.attribute && item.value)
+              .map((item) => ({
+                optionCode,
+                category: item.category,
+                item: item.item,
+                attribute: item.attribute,
+                location: item.location || null,
+                value: item.value,
+              })) : []
           )
-        },
+        } : undefined,
       },
       include: {
         interiorColor: true,
@@ -218,13 +273,47 @@ export async function POST(
         installedEquipment: true,
       }
     });
+    } catch (dbError) {
+      console.log('Database error creating NeoVin');
+      if (dbError instanceof Error) {
+        console.log('Error name:', dbError.name);
+        console.log('Error message:', dbError.message);
+        console.log('Error stack:', dbError.stack);
+      } else {
+        console.log('Unknown error type:', typeof dbError);
+        console.log('Error stringified:', JSON.stringify(dbError, null, 2));
+      }
+      
+      // Log the data that was being inserted
+      console.log('Failed data:', {
+        vehicleId: vehicle.uuid,
+        vin: marketCheckData.vin,
+        hasInteriorColor: !!marketCheckData.interior_color,
+        interiorColorData: marketCheckData.interior_color,
+        hasExteriorColor: !!marketCheckData.exterior_color,
+        exteriorColorData: marketCheckData.exterior_color,
+        hasRating: !!marketCheckData.rating,
+        ratingData: marketCheckData.rating,
+        hasWarranty: !!marketCheckData.warranty,
+        warrantyData: marketCheckData.warranty
+      });
+      
+      throw dbError;
+    }
 
     return NextResponse.json({ neoVin });
   } catch (error) {
-    console.error('Error in NeoVin decode:', error);
+    console.log('Error in NeoVin decode');
+    if (error instanceof Error) {
+      console.log('Error message:', error.message);
+      return NextResponse.json({ 
+        error: 'Internal server error', 
+        details: error.message
+      }, { status: 500 });
+    }
     return NextResponse.json({ 
       error: 'Internal server error', 
-      details: error instanceof Error ? error.message : 'Unknown error' 
+      details: 'Unknown error' 
     }, { status: 500 });
   }
 }
@@ -261,10 +350,17 @@ export async function GET(
 
     return NextResponse.json({ neoVin });
   } catch (error) {
-    console.error('Error fetching NeoVin:', error);
+    console.log('Error fetching NeoVin');
+    if (error instanceof Error) {
+      console.log('Error message:', error.message);
+      return NextResponse.json({ 
+        error: 'Internal server error', 
+        details: error.message
+      }, { status: 500 });
+    }
     return NextResponse.json({ 
       error: 'Internal server error', 
-      details: error instanceof Error ? error.message : 'Unknown error' 
+      details: 'Unknown error' 
     }, { status: 500 });
   }
 }

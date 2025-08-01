@@ -1,35 +1,17 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
+import { requireOrganization } from '@/lib/auth';
 
 // PATCH - Update accessory selections and get updated valuation from JD Power
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ uuid: string; bookoutId: string }> }
-) {
+export const PATCH = requireOrganization(async (request: NextRequest, context, { params }: { params: Promise<{ uuid: string; bookoutId: string }> }) => {
   try {
     const { uuid, bookoutId } = await params;
-    
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true }
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
 
     // Verify vehicle ownership and get bookout
     const vehicle = await db.vehicle.findUnique({
       where: {
         uuid: uuid,
-        userId: user.id
+        organizationId: context.organization.id
       },
       include: {
         bookouts: {
@@ -337,35 +319,18 @@ export async function PATCH(
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
-}
+});
 
 // GET - Get current accessory selections for a bookout
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ uuid: string; bookoutId: string }> }
-) {
+export const GET = requireOrganization(async (request: NextRequest, context, { params }: { params: Promise<{ uuid: string; bookoutId: string }> }) => {
   try {
     const { uuid, bookoutId } = await params;
-    
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true }
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
 
     // Verify vehicle ownership and get accessories
     const vehicle = await db.vehicle.findUnique({
       where: {
         uuid: uuid,
-        userId: user.id
+        organizationId: context.organization.id
       },
       include: {
         bookouts: {
@@ -443,4 +408,4 @@ export async function GET(
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
-}
+});

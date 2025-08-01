@@ -16,9 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Check, ArrowLeft } from 'lucide-react';
+import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { useBreadcrumb } from '@/contexts/breadcrumb-context';
 
 const getInitials = (name: string = '') => {
   return name
@@ -49,6 +50,7 @@ export default function UserDetailPage() {
   const params = useParams();
   const router = useRouter();
   const userId = params.id as string;
+  const { setCustomLabel } = useBreadcrumb();
   
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
@@ -100,6 +102,9 @@ export default function UserDetailPage() {
         if (user.image) {
           setAvatarPreview(user.image);
         }
+        
+        // Set custom breadcrumb label with user's name
+        setCustomLabel(user.name || user.email || 'User');
 
         // Load current user's role for permissions
         const currentUserResponse = await fetch('/api/user/settings');
@@ -129,7 +134,12 @@ export default function UserDetailPage() {
     };
 
     loadUser();
-  }, [userId, toast, router, session]);
+    
+    // Cleanup: reset custom breadcrumb on unmount
+    return () => {
+      setCustomLabel(null);
+    };
+  }, [userId, toast, router, session, setCustomLabel]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -286,15 +296,6 @@ export default function UserDetailPage() {
   if (isLoadingUser) {
     return (
       <div className="space-y-6 max-h-screen overflow-y-auto scrollbar-hide">
-        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-          <Link href="/" className="hover:text-gray-900">Truebook</Link>
-          <span className="text-gray-400">/</span>
-          <Link href="/dashboard" className="hover:text-gray-900">Dashboard</Link>
-          <span className="text-gray-400">/</span>
-          <Link href="/dashboard/users" className="hover:text-gray-900">Users</Link>
-          <span className="text-gray-400">/</span>
-          <span className="text-gray-900">Loading...</span>
-        </nav>
         <div className="flex items-center justify-center h-64">
           <div className="text-lg">Loading user...</div>
         </div>
@@ -305,15 +306,6 @@ export default function UserDetailPage() {
   if (!userData) {
     return (
       <div className="space-y-6 max-h-screen overflow-y-auto scrollbar-hide">
-        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-          <Link href="/" className="hover:text-gray-900">Truebook</Link>
-          <span className="text-gray-400">/</span>
-          <Link href="/dashboard" className="hover:text-gray-900">Dashboard</Link>
-          <span className="text-gray-400">/</span>
-          <Link href="/dashboard/users" className="hover:text-gray-900">Users</Link>
-          <span className="text-gray-400">/</span>
-          <span className="text-gray-900">User Not Found</span>
-        </nav>
         <div className="flex items-center justify-center h-64">
           <div className="text-lg">User not found</div>
         </div>
@@ -323,27 +315,10 @@ export default function UserDetailPage() {
 
   return (
     <div className="space-y-6 max-h-screen overflow-y-auto scrollbar-hide">
-      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link href="/" className="hover:text-gray-900">Truebook</Link>
-        <span className="text-gray-400">/</span>
-        <Link href="/dashboard" className="hover:text-gray-900">Dashboard</Link>
-        <span className="text-gray-400">/</span>
-        <Link href="/dashboard/users" className="hover:text-gray-900">Users</Link>
-        <span className="text-gray-400">/</span>
-        <span className="text-gray-900">{userData.name || userData.email || 'User'}</span>
-      </nav>
 
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/dashboard/users">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Users
-          </Button>
-        </Link>
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">User Details</h2>
-          <p className="text-sm text-muted-foreground">Manage user account and preferences.</p>
-        </div>
+      <div>
+        <h2 className="text-2xl font-semibold tracking-tight">User Details</h2>
+        <p className="text-sm text-muted-foreground">Manage user account and preferences.</p>
       </div>
 
       <div className="grid gap-6">

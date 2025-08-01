@@ -249,13 +249,6 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link href="/" className="hover:text-gray-900">Truebook</Link>
-        <span className="text-gray-400">/</span>
-        <Link href="/dashboard" className="hover:text-gray-900">Dashboard</Link>
-        <span className="text-gray-400">/</span>
-        <span className="text-gray-900">Users</span>
-      </nav>
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Users</h2>

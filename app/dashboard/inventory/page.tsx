@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useOrganization } from "@/contexts/organization-context";
 import {
   Table,
   TableBody,
@@ -31,6 +32,7 @@ import {
 import { ArrowUpDown, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { SessionDebug } from "@/components/session-debug";
 
 interface Vehicle {
   uuid: string;
@@ -43,6 +45,7 @@ const ITEMS_PER_PAGE = 20;
 
 export default function SavedVehiclesPage() {
   const router = useRouter();
+  const { currentOrganization, isLoading: orgLoading } = useOrganization();
   const [currentPage, setCurrentPage] = useState(1);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -56,22 +59,53 @@ export default function SavedVehiclesPage() {
   const [propertyValue, setPropertyValue] = useState<string>('');
   const [selectedModelYear, setSelectedModelYear] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Debug logging
+  console.log('SavedVehiclesPage - render with:', {
+    currentOrganization,
+    orgLoading,
+    isLoadingVehicles
+  });
 
   useEffect(() => {
+    console.log('SavedVehiclesPage useEffect - orgLoading:', orgLoading, 'currentOrganization:', currentOrganization);
+    
+    // Wait for organization context to finish loading
+    if (orgLoading) {
+      console.log('Organization context is still loading, waiting...');
+      setIsLoadingVehicles(true);
+      return;
+    }
+    
+    // If not loading but no organization, handle it
+    if (!orgLoading && !currentOrganization) {
+      console.log('No organization found after loading');
+      setIsLoadingVehicles(false);
+      return;
+    }
+    
     const fetchVehicles = async () => {
       try {
+        console.log('Fetching vehicles for organization:', currentOrganization.id);
         setIsLoadingVehicles(true);
         const response = await fetch('/api/vehicles', {
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            'x-organization-id': currentOrganization.id
+          }
         });
+        
+        console.log('Fetch response status:', response.status);
+        
         if (!response.ok) {
           if (response.status === 401) {
             router.push('/login');
             return;
           }
-          throw new Error('Failed to fetch vehicles');
+          throw new Error(`Failed to fetch vehicles: ${response.status}`);
         }
         const data = await response.json();
+        console.log('Fetched vehicles:', data);
         setVehicles(data);
       } catch (error) {
         console.error('Error fetching vehicles:', error);
@@ -82,7 +116,7 @@ export default function SavedVehiclesPage() {
     };
 
     fetchVehicles();
-  }, []);
+  }, [currentOrganization, orgLoading, router]);
 
   // Get unique makers from vehicles
   const uniqueMakers = [...new Set(vehicles.map(vehicle => 
@@ -259,13 +293,7 @@ export default function SavedVehiclesPage() {
 
   return (
     <div className="space-y-6">
-      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link href="/" className="hover:text-gray-900">Truebook</Link>
-        <span className="text-gray-400">/</span>
-        <Link href="/dashboard" className="hover:text-gray-900">Dashboard</Link>
-        <span className="text-gray-400">/</span>
-        <span className="text-gray-900">Inventory</span>
-      </nav>
+      <SessionDebug />
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Inventory</h2>

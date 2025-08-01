@@ -1,12 +1,8 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
+import { requireOrganization } from '@/lib/auth';
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ uuid: string }> }
-) {
+export const POST = requireOrganization(async (request: NextRequest, context, { params }: { params: Promise<{ uuid: string }> }) => {
   try {
     console.log('AI Validation API called');
     const { uuid } = await params;
@@ -16,31 +12,13 @@ export async function POST(
       return NextResponse.json({ error: 'UUID is required' }, { status: 400 });
     }
 
-    console.log('Getting session...');
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      console.log('No session found');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    console.log('Session user email:', session.user.email);
-
-    console.log('Finding user...');
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true }
-    });
-
-    if (!user) {
-      console.log('User not found');
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    console.log('User found:', user.id);
+    console.log('Organization found:', context.organization.id);
 
     // Get vehicle with latest JD Power bookout and accessories
     const vehicle = await db.vehicle.findUnique({
       where: {
         uuid: uuid,
-        userId: user.id
+        organizationId: context.organization.id
       },
       include: {
         vehiclePairs: true, // CRITICAL: User-provided build sheet data
@@ -604,4 +582,4 @@ Focus on intelligent matching rather than exact string matches. Most automotive 
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }, { status: 500 });
   }
-}
+});

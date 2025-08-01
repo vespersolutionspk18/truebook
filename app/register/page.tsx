@@ -21,6 +21,7 @@ export default function RegisterPage() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     const name = formData.get('name') as string;
+    const organizationName = formData.get('organizationName') as string;
 
     if (!email || !password || !name) {
       toast({
@@ -41,7 +42,8 @@ export default function RegisterPage() {
         body: JSON.stringify({
           email,
           password,
-          name
+          name,
+          organizationName
         })
       });
 
@@ -96,6 +98,15 @@ export default function RegisterPage() {
                   type="email"
                   placeholder="Enter your email"
                   required
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="flex flex-col space-y-1.5">
+                <Label htmlFor="organizationName">Organization Name</Label>
+                <Input
+                  id="organizationName"
+                  name="organizationName"
+                  placeholder="Enter your organization name (optional)"
                   disabled={isLoading}
                 />
               </div>

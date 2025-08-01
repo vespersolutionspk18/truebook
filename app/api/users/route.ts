@@ -1,100 +1,81 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { NextResponse, NextRequest } from 'next/server';
+import { requireOrganization } from '@/lib/auth';
 import { db } from '@/lib/db';
 import bcrypt from 'bcrypt';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth-options';
 
-export async function GET() {
+export const GET = requireOrganization(async (req, context) => {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.email) {
-      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    try {
-      // Get all users with their settings
-      const users = await db.user.findMany({
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          image: true,
-          role: true,
-          createdAt: true,
-          emailVerified: true,
-          settings: {
-            select: {
-              notifications: true,
-              emailUpdates: true,
-              darkMode: true
+    // Get only users from the current organization
+    const organizationUsers = await db.organizationUser.findMany({
+      where: {
+        organizationId: context.organization.id
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            role: true,
+            createdAt: true,
+            emailVerified: true,
+            settings: {
+              select: {
+                notifications: true,
+                emailUpdates: true,
+                darkMode: true
+              }
             }
           }
-        },
-        orderBy: {
-          createdAt: 'desc'
         }
-      });
+      },
+      orderBy: {
+        joinedAt: 'desc'
+      }
+    });
 
-      return new NextResponse(JSON.stringify(users), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } catch (dbError) {
-      console.error('Database operation failed:', dbError);
-      return new NextResponse(JSON.stringify({ error: 'Database operation failed' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    // Transform to include org role
+    const users = organizationUsers.map(ou => ({
+      ...ou.user,
+      organizationRole: ou.role,
+      joinedAt: ou.joinedAt
+    }));
+
+    return NextResponse.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
-    return new NextResponse(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
 
-export async function POST(request: Request) {
+export const POST = requireOrganization(async (req, context) => {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.email) {
-      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    const data = await request.json();
+    const data = await req.json();
 
     // Validate input data
     if (!data || typeof data !== 'object') {
-      return new NextResponse(JSON.stringify({ error: 'Invalid request data' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
     }
 
     // Validate required fields
     if (!data.email || !data.name || !data.password) {
-      return new NextResponse(JSON.stringify({ error: 'Email, name, and password are required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return NextResponse.json({ error: 'Email, name, and password are required' }, { status: 400 });
     }
 
     // Validate role if provided
     const validRoles = ['SUPERADMIN', 'ADMIN', 'MANAGER', 'EMPLOYEE'];
     if (data.role && !validRoles.includes(data.role)) {
-      return new NextResponse(JSON.stringify({ error: 'Invalid role specified' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return NextResponse.json({ error: 'Invalid role specified' }, { status: 400 });
+    }
+
+    // Validate organization role
+    const validOrgRoles = ['OWNER', 'ADMIN', 'MEMBER'];
+    const organizationRole = data.organizationRole || 'MEMBER';
+    if (!validOrgRoles.includes(organizationRole)) {
+      return NextResponse.json({ error: 'Invalid organization role specified' }, { status: 400 });
     }
 
     // Check if user with this email already exists
@@ -102,53 +83,91 @@ export async function POST(request: Request) {
       where: { email: data.email }
     });
 
+    let userId: string;
+
     if (existingUser) {
-      return new NextResponse(JSON.stringify({ error: 'User with this email already exists' }), {
-        status: 409,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-
-    // Create user with default settings
-    const newUser = await db.user.create({
-      data: {
-        email: data.email,
-        name: data.name,
-        password: hashedPassword,
-        role: data.role || 'EMPLOYEE',
-        settings: {
-          create: {
-            notifications: true,
-            emailUpdates: true,
-            darkMode: false
+      // User exists, check if already in organization
+      const existingMembership = await db.organizationUser.findUnique({
+        where: {
+          userId_organizationId: {
+            userId: existingUser.id,
+            organizationId: context.organization.id
           }
         }
+      });
+
+      if (existingMembership) {
+        return NextResponse.json({ error: 'User is already a member of this organization' }, { status: 409 });
+      }
+
+      userId = existingUser.id;
+    } else {
+      // Create new user
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+      const newUser = await db.user.create({
+        data: {
+          email: data.email,
+          name: data.name,
+          password: hashedPassword,
+          role: data.role || 'EMPLOYEE',
+          settings: {
+            create: {
+              notifications: true,
+              emailUpdates: true,
+              darkMode: false
+            }
+          }
+        }
+      });
+      userId = newUser.id;
+    }
+
+    // Add user to organization
+    await db.organizationUser.create({
+      data: {
+        userId,
+        organizationId: context.organization.id,
+        role: organizationRole
+      }
+    });
+
+    // Fetch the complete user data
+    const orgUser = await db.organizationUser.findUnique({
+      where: {
+        userId_organizationId: {
+          userId,
+          organizationId: context.organization.id
+        }
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        role: true,
-        createdAt: true,
-        emailVerified: true,
-        settings: {
+      include: {
+        user: {
           select: {
-            notifications: true,
-            emailUpdates: true,
-            darkMode: true
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            role: true,
+            createdAt: true,
+            emailVerified: true,
+            settings: {
+              select: {
+                notifications: true,
+                emailUpdates: true,
+                darkMode: true
+              }
+            }
           }
         }
       }
     });
 
-    return new NextResponse(JSON.stringify(newUser), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const userWithOrgRole = {
+      ...orgUser!.user,
+      organizationRole: orgUser!.role,
+      joinedAt: orgUser!.joinedAt
+    };
+
+    return NextResponse.json(userWithOrgRole, { status: 201 });
   } catch (error) {
     console.error('Error creating user:', error);
     
@@ -156,18 +175,12 @@ export async function POST(request: Request) {
     if (error && typeof error === 'object' && 'code' in error) {
       switch (error.code) {
         case 'P2002':
-          return new NextResponse(JSON.stringify({ error: 'User with this email already exists' }), {
-            status: 409,
-            headers: { 'Content-Type': 'application/json' },
-          });
+          return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
         default:
           break;
       }
     }
 
-    return new NextResponse(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});

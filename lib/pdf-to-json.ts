@@ -9,7 +9,7 @@ export async function convertMonroneyToJSON(pdfBlob: Blob): Promise<{ [key: stri
   try {
     const arrayBuffer = await new Response(pdfBlob).arrayBuffer();
     const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-    let extractedText = [];
+    const extractedText = [];
 
     // Extract text from all pages
     for (let i = 1; i <= pdf.numPages; i++) {
@@ -23,7 +23,7 @@ export async function convertMonroneyToJSON(pdfBlob: Blob): Promise<{ [key: stri
       let lastX = null;
 
       for (const item of sortedItems) {
-        let text = item.str.trim();
+        const text = item.str.trim();
 
         // Fix spacing between words
         if (lastX !== null && Math.abs(item.transform[4] - lastX) < 10) {

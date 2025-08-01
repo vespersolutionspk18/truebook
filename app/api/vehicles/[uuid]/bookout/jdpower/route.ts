@@ -1,40 +1,23 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireOrganization } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { fetchJDPowerValuation } from '@/lib/jdpower';
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ uuid: string }> }
-) {
-  try {
-    const { uuid } = await params;
-    console.log('POST /api/vehicles/[uuid]/bookout/jdpower - UUID:', uuid);
+export const POST = requireOrganization(
+  async (req: NextRequest, context, { params }: { params: Promise<{ uuid: string }> }) => {
+    try {
+      const { uuid } = await params;
+      console.log('POST /api/vehicles/[uuid]/bookout/jdpower - UUID:', uuid);
 
-    if (!uuid) {
-      return NextResponse.json({ error: 'UUID is required' }, { status: 400 });
-    }
-
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true }
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+      if (!uuid) {
+        return NextResponse.json({ error: 'UUID is required' }, { status: 400 });
+      }
 
     // Get vehicle with mileage
     const vehicle = await db.vehicle.findUnique({
       where: {
         uuid: uuid,
-        userId: user.id
+        organizationId: context.organization.id
       },
       select: {
         uuid: true,
@@ -47,7 +30,7 @@ export async function POST(
       return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
     }
 
-    const body = await request.json();
+    const body = await req.json();
     const region = body.region || 1; // Default to Eastern region if not provided
 
     console.log('Fetching JD Power valuation for:', {
@@ -449,4 +432,4 @@ export async function POST(
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
-}
+});

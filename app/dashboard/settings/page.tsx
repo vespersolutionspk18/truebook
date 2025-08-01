@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { useOrganization } from '@/contexts/organization-context';
 
 const getInitials = (name: string = '') => {
   return name
@@ -182,14 +183,6 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 max-h-screen overflow-y-auto scrollbar-hide">
-      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link href="/" className="hover:text-gray-900">Truebook</Link>
-        <span className="text-gray-400">/</span>
-        <Link href="/dashboard" className="hover:text-gray-900">Dashboard</Link>
-        <span className="text-gray-400">/</span>
-        <span className="text-gray-900">Settings</span>
-      </nav>
-
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Settings</h2>
         <p className="text-sm text-muted-foreground">Manage your account settings and preferences.</p>

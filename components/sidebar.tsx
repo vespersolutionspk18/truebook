@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ChevronFirst, ChevronLast, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { MdDashboard, MdSettings } from "react-icons/md";
 import { IoIosGitCompare } from "react-icons/io";
 import { CiFileOn, CiSearch } from "react-icons/ci";
@@ -20,10 +20,12 @@ import { useSession, signOut } from "next-auth/react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 
-interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
+}
 
-export function Sidebar({ className }: SidebarProps) {
-  const [expanded, setExpanded] = useState(true);
+export function Sidebar({ className, expanded = true, onExpandedChange }: SidebarProps) {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{uuid: string; vin: string}>>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -94,7 +96,7 @@ export function Sidebar({ className }: SidebarProps) {
       )}
     >
       <div className="gap-4 py-4 h-full bg-gray-100 relative flex flex-col">
-        <div className="px-3 py-2 flex items-center justify-between">
+        <div className="px-3 py-2 flex items-center justify-center">
           <Link href="/dashboard">
             {expanded ? (
               <Image src="/logo.svg" width={150} height={75} alt="Logo" />
@@ -102,13 +104,6 @@ export function Sidebar({ className }: SidebarProps) {
               <Image src="/logo-short.svg" width={30} height={30} alt="Logo" className="transition-all duration-300 ease-in-out" />
             )}
           </Link>
-          <Button
-            onClick={() => setExpanded((curr) => !curr)}
-            variant="ghost"
-            className="h-6 w-6 p-0"
-          >
-            {expanded ? <ChevronFirst className="h-6 w-6" /> : <ChevronLast className="h-6 w-6" />}
-          </Button>
         </div>
 
         {/* Search Input */}
@@ -255,12 +250,12 @@ export function Sidebar({ className }: SidebarProps) {
                   {expanded && <span className="ml-3 text-sm">Comparisons</span>}
                 </div>
               </Link>
-              <Link href="/dashboard/saved-vehicles">
+              <Link href="/dashboard/inventory">
                 <div
                   className={cn(
                     "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
                     !expanded && "justify-center p-2",
-                    pathname === "/dashboard/saved-vehicles" && "bg-white border-gray-300 text-black font-medium shadow-sm"
+                    pathname === "/dashboard/inventory" && "bg-white border-gray-300 text-black font-medium shadow-sm"
                   )}
                 >
                   <CiSaveUp2 className="h-5 w-5 stroke-gray-800 hover:stroke-black" />

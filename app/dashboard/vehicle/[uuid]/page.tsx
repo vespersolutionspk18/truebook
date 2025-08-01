@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { NeoVinDisplay } from '@/components/ui/neovin-display';
 import AIValidationComponent from '@/components/AIValidationComponent';
+import { useBreadcrumb } from '@/contexts/breadcrumb-context';
 
 interface VehiclePair {
   property: string;
@@ -112,6 +113,7 @@ export default function VehicleDetailsPage() {
   const [isLoadingBookout, setIsLoadingBookout] = useState(false);
   const [bookoutError, setBookoutError] = useState<string | null>(null);
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
+  const { setCustomLabel } = useBreadcrumb();
 
 
   const handleDecodeVIN = async () => {
@@ -233,6 +235,9 @@ export default function VehicleDetailsPage() {
         console.log('Vehicle data loaded:', data);
         setVehicle(data);
         setMileage(data.mileage?.toString() || '');
+        
+        // Set custom breadcrumb label with VIN
+        setCustomLabel(data.vin);
 
         // Log VIN, Model Year, and Make
         const modelYear = data.vehiclePairs.find((pair: VehiclePair) => pair.property === 'Model Year')?.value || 'N/A';
@@ -253,14 +258,16 @@ export default function VehicleDetailsPage() {
     }
   }, [params.uuid]);
 
-  // Cleanup timeout on unmount
+  // Cleanup timeout on unmount and reset breadcrumb
   useEffect(() => {
     return () => {
       if (mileageTimeoutRef.current) {
         clearTimeout(mileageTimeoutRef.current);
       }
+      // Reset custom breadcrumb on unmount
+      setCustomLabel(null);
     };
-  }, []);
+  }, [setCustomLabel]);
 
   if (isLoading) {
     return (
@@ -281,15 +288,6 @@ export default function VehicleDetailsPage() {
 
   return (
     <div className="space-y-6 max-h-screen overflow-y-auto pb-6">
-      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link href="/" className="hover:text-gray-900">Truebook</Link>
-        <span className="text-gray-400">/</span>
-        <Link href="/dashboard" className="hover:text-gray-900">Dashboard</Link>
-        <span className="text-gray-400">/</span>
-        <Link href="/dashboard/saved-vehicles" className="hover:text-gray-900">Inventory</Link>
-        <span className="text-gray-400">/</span>
-        <span className="text-gray-900">{vehicle.vin}</span>
-      </nav>
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Vehicle Details</h2>

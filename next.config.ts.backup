@@ -1,0 +1,30 @@
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  // For now, disable Turbopack if it's causing issues
+  // You can remove this once the issue is resolved
+  experimental: {
+    // Force these packages to be external (not bundled)
+    serverComponentsExternalPackages: ['bcrypt', '@mapbox/node-pre-gyp', 'mock-aws-s3', 'aws-sdk', 'nock']
+  },
+  
+  webpack: (config, { isServer }) => {
+    // Only apply to client-side bundles
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        child_process: false,
+        'mock-aws-s3': false,
+        'aws-sdk': false,
+        'nock': false,
+      };
+    }
+    
+    return config;
+  },
+};
+
+export default nextConfig;
