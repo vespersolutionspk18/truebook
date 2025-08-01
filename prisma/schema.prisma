@@ -609,6 +609,7 @@ model AIValidation {
   // Relations for change tracking
   snapshot          BookoutSnapshot?
   changeLogs        BookoutChangeLog[]
+  validationSession ValidationSession?
   
   @@index([vehicleId])
   @@index([provider])
@@ -713,4 +714,49 @@ model OrganizationFeatureFlag {
   @@unique([organizationId, featureFlagId])
   @@index([organizationId])
   @@index([featureFlagId])
+}
+
+model ValidationSession {
+  id                String   @id @default(cuid())
+  validationId      String   @unique
+  vehicleId         String
+  bookoutId         String
+  status            String   @default("pending") // pending, applied, cancelled
+  
+  // Track when the session was created and applied
+  createdAt         DateTime @default(now())
+  appliedAt         DateTime?
+  expiresAt         DateTime // Sessions expire after X hours
+  
+  // Relations
+  validation        AIValidation @relation(fields: [validationId], references: [id], onDelete: Cascade)
+  overrides         AccessoryOverride[]
+  
+  @@index([vehicleId])
+  @@index([bookoutId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model AccessoryOverride {
+  id                String   @id @default(cuid())
+  sessionId         String
+  session           ValidationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  // Accessory being overridden
+  accessoryCode     String
+  accessoryName     String
+  
+  // Simple override - if true, keep JD Power selection instead of build sheet
+  keepJdPower       Boolean  @default(false)
+  
+  // What would happen without override
+  aiRecommendation  String   // "SELECT", "DESELECT"
+  originalSelected  Boolean  // Was it selected in JD Power originally
+  
+  createdAt         DateTime @default(now())
+  
+  @@unique([sessionId, accessoryCode])
+  @@index([sessionId])
+  @@index([accessoryCode])
 }

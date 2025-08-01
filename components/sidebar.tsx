@@ -214,30 +214,6 @@ export function Sidebar({ className, expanded = true, onExpandedChange }: Sideba
                   {expanded && <span className="ml-3 text-sm">VIN Lookup</span>}
                 </div>
               </Link>
-              <Link href="/dashboard/monroney">
-                <div
-                  className={cn(
-                    "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
-                    !expanded && "justify-center p-2",
-                    pathname === "/dashboard/monroney" && "bg-white border-gray-300 text-black font-medium shadow-sm"
-                  )}
-                >
-                  <CiFileOn className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
-                  {expanded && <span className="ml-3 text-sm">Monroney Labels</span>}
-                </div>
-              </Link>
-              <Link href="/dashboard/build-sheets">
-                <div
-                  className={cn(
-                    "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
-                    !expanded && "justify-center p-2",
-                    pathname === "/dashboard/build-sheets" && "bg-white border-gray-300 text-black font-medium shadow-sm"
-                  )}
-                >
-                  <HiOutlineDocumentDuplicate className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
-                  {expanded && <span className="ml-3 text-sm">Build Sheets</span>}
-                </div>
-              </Link>
               <Link href="/dashboard/comparisons">
                 <div
                   className={cn(
@@ -272,18 +248,6 @@ export function Sidebar({ className, expanded = true, onExpandedChange }: Sideba
                 >
                   <HiOutlineUsers className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
                   {expanded && <span className="ml-3 text-sm">Users</span>}
-                </div>
-              </Link>
-              <Link href="/dashboard/reports">
-                <div
-                  className={cn(
-                    "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
-                    !expanded && "justify-center p-2",
-                    pathname === "/dashboard/reports" && "bg-white border-gray-300 text-black font-medium shadow-sm"
-                  )}
-                >
-                  <HiOutlineDocumentDuplicate className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
-                  {expanded && <span className="ml-3 text-sm">Reports & Exports</span>}
                 </div>
               </Link>
             </div>

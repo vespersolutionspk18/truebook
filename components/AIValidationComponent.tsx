@@ -172,6 +172,194 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentValidationId, setCurrentValidationId] = useState<string | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [sessionOverrides, setSessionOverrides] = useState<Map<string, any>>(new Map());
+  const [isApplyingSession, setIsApplyingSession] = useState(false);
+  const [sessionDetails, setSessionDetails] = useState<any>(null);
+  const [localOverrides, setLocalOverrides] = useState<Set<string>>(new Set());
+
+  const loadSessionOverrides = async (sessionId: string) => {
+    try {
+      const response = await fetch(`/api/vehicles/${vehicleUuid}/validation-session/${sessionId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSessionDetails(data.session);
+        
+        // Create a map of overrides for easy lookup
+        const overridesMap = new Map();
+        data.session.overrides.forEach((override: any) => {
+          overridesMap.set(override.accessoryCode, override);
+        });
+        setSessionOverrides(overridesMap);
+        
+        // Also update local overrides based on keepJdPower flag
+        const localOverridesSet = new Set<string>();
+        data.session.overrides.forEach((override: any) => {
+          if (override.keepJdPower) {
+            localOverridesSet.add(override.accessoryCode);
+          }
+        });
+        setLocalOverrides(localOverridesSet);
+      }
+    } catch (err) {
+      console.error('Failed to load session overrides:', err);
+    }
+  };
+
+  const handleOverride = async (accessoryCode: string) => {
+    if (!currentSessionId) return;
+    
+    try {
+      const response = await fetch(`/api/vehicles/${vehicleUuid}/validation-session/${currentSessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessoryCode })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Update local state
+        const updatedOverrides = new Map(sessionOverrides);
+        const existingOverride = updatedOverrides.get(accessoryCode);
+        if (existingOverride) {
+          updatedOverrides.set(accessoryCode, {
+            ...existingOverride,
+            keepJdPower: data.override.keepJdPower
+          });
+          setSessionOverrides(updatedOverrides);
+        }
+      } else {
+        const error = await response.json();
+        alert(`Failed to update override: ${error.error}`);
+      }
+    } catch (err) {
+      console.error('Error updating override:', err);
+      alert('Failed to update override');
+    }
+  };
+
+  const handleApplyChanges = async () => {
+    if (!validationResult) return;
+    
+    setIsApplyingSession(true);
+    setError(null);
+    
+    try {
+      // Get the vehicle data with bookouts
+      const vehicleResponse = await fetch(`/api/vehicles/${vehicleUuid}`);
+      if (!vehicleResponse.ok) {
+        throw new Error('Failed to get vehicle data');
+      }
+      const vehicleData = await vehicleResponse.json();
+      
+      // Find the latest JD Power bookout
+      const currentBookout = vehicleData.bookouts?.find((b: any) => b.provider === 'jdpower');
+      
+      if (!currentBookout) {
+        throw new Error('No JD Power bookout found');
+      }
+
+      // Calculate which accessories should be selected
+      const finalSelections = new Set<string>();
+      const currentSelections = new Set<string>();
+      
+      // Track current selections
+      currentBookout.accessories.forEach((acc: any) => {
+        if (acc.isSelected) {
+          currentSelections.add(acc.code);
+          finalSelections.add(acc.code);
+        }
+      });
+
+      console.log('Current selections:', Array.from(currentSelections));
+      console.log('Overrides:', Array.from(localOverrides));
+
+      // Apply AI recommendations (unless overridden)
+      let addedCount = 0;
+      let removedCount = 0;
+      
+      validationResult.comparisons.forEach((comp: any) => {
+        const accessoryCode = comp.jd_power_accessory.code;
+        const isOverridden = localOverrides.has(accessoryCode);
+        const isCurrentlySelected = currentSelections.has(accessoryCode);
+        
+        if (!isOverridden) {
+          // Follow AI recommendation
+          if (comp.validation_status === 'CONFIRMED' || comp.validation_status === 'PARTIAL_MATCH') {
+            if (!isCurrentlySelected) {
+              finalSelections.add(accessoryCode);
+              addedCount++;
+              console.log(`Adding: ${accessoryCode} - ${comp.jd_power_accessory.name}`);
+            }
+          } else if (comp.validation_status === 'NOT_FOUND') {
+            if (isCurrentlySelected) {
+              finalSelections.delete(accessoryCode);
+              removedCount++;
+              console.log(`Removing: ${accessoryCode} - ${comp.jd_power_accessory.name}`);
+            }
+          }
+        } else {
+          console.log(`Overridden (keeping original): ${accessoryCode} - ${comp.jd_power_accessory.name}`);
+        }
+      });
+
+      console.log(`Changes: ${addedCount} added, ${removedCount} removed`);
+      console.log('Final selections:', Array.from(finalSelections));
+
+      // Update the bookout with change tracking
+      const updateResponse = await fetch(
+        `/api/vehicles/${vehicleUuid}/bookout/${currentBookout.id}/accessories`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            selectedAccessoryCodes: Array.from(finalSelections),
+            changeTrackingValidationId: currentValidationId // Pass validation ID for change tracking
+          })
+        }
+      );
+
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json();
+        throw new Error(errorData.error || 'Failed to update bookout');
+      }
+
+      const updateResult = await updateResponse.json();
+      console.log('Bookout updated:', updateResult);
+      
+      // Trigger parent component to refresh vehicle data
+      if (onValidationComplete) {
+        onValidationComplete();
+      }
+      
+      // Show success message with details
+      if (addedCount > 0 || removedCount > 0) {
+        alert(`Bookout updated successfully!\n${addedCount} accessories added\n${removedCount} accessories removed`);
+      } else {
+        alert('No changes were made - all accessories are already correctly selected according to the build sheet.');
+      }
+      
+      // Reset state
+      setLocalOverrides(new Set());
+      
+      // Reload the validation to show updated comparison
+      if (currentValidationId) {
+        const validationResponse = await fetch(`/api/vehicles/${vehicleUuid}/ai-validations/${currentValidationId}`);
+        if (validationResponse.ok) {
+          const validationData = await validationResponse.json();
+          if (validationData.validation?.outputData) {
+            setValidationResult(validationData.validation.outputData);
+          }
+        }
+      }
+      
+    } catch (err) {
+      console.error('Error applying changes:', err);
+      setError(err instanceof Error ? err.message : 'Failed to apply changes');
+    } finally {
+      setIsApplyingSession(false);
+    }
+  };
 
   const handleValidate = async () => {
     console.log('Validate button clicked for vehicle:', vehicleUuid);
@@ -202,15 +390,11 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
       console.log('Setting validation result:', data.result);
       setValidationResult(data.result);
       setCurrentValidationId(data.validation_id);
+      setCurrentSessionId(data.session_id);
       
-      // Auto-selection was applied - bookout values are already updated via API
-      if (data.result.auto_selection?.applied) {
-        console.log('Auto-selection applied - bookout values updated');
-        // Trigger parent component to refresh vehicle data
-        if (onValidationComplete) {
-          console.log('Calling onValidationComplete to refresh bookout data');
-          onValidationComplete();
-        }
+      // Load session overrides if session was created
+      if (data.session_id) {
+        await loadSessionOverrides(data.session_id);
       }
     } catch (err) {
       console.error('Validation error:', err);
@@ -231,7 +415,13 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
             const mostRecent = data.validations[0]; // Already ordered by createdAt desc
             if (mostRecent.outputData) {
               setValidationResult(mostRecent.outputData);
-              setCurrentValidationId(mostRecent.id); // SET THE FUCKING VALIDATION ID
+              setCurrentValidationId(mostRecent.id);
+              
+              // Check if there's a session for this validation
+              if (mostRecent.outputData.session?.id) {
+                setCurrentSessionId(mostRecent.outputData.session.id);
+                await loadSessionOverrides(mostRecent.outputData.session.id);
+              }
             }
           }
         }
@@ -256,25 +446,62 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
   return (
     <div className="space-y-6">
       {/* Validation Controls */}
-      <div className="flex items-center justify-end">
-        <Button 
-          onClick={handleValidate} 
-          disabled={isValidating}
-          size="sm"
-          className="bg-red-600 hover:bg-red-700 text-white"
-        >
-          {isValidating ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Validating...
-            </>
-          ) : (
-            <>
-              <FileSearch className="h-4 w-4 mr-2" />
-              Validate
-            </>
+      <div className="flex items-center justify-between">
+        <div>
+          {sessionDetails && (
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">{sessionDetails.summary.totalChanges}</span> changes recommended
+              {sessionDetails.summary.keepingJdPower > 0 && (
+                <span className="ml-2">
+                  ({sessionDetails.summary.keepingJdPower} overridden)
+                </span>
+              )}
+              {sessionDetails.isExpired && (
+                <Badge variant="destructive" className="ml-2">Session Expired</Badge>
+              )}
+            </div>
           )}
-        </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          {validationResult && (
+            <Button 
+              onClick={handleApplyChanges} 
+              disabled={isApplyingSession}
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {isApplyingSession ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Updating Bookout...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Update Bookout
+                </>
+              )}
+            </Button>
+          )}
+          <Button 
+            onClick={handleValidate} 
+            disabled={isValidating}
+            size="sm"
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            {isValidating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Validating...
+              </>
+            ) : (
+              <>
+                <FileSearch className="h-4 w-4 mr-2" />
+                Validate
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Error Display */}
@@ -297,55 +524,6 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
           <TabsContent value="results" className="space-y-6">
             {validationResult && (
               <div className="space-y-6">
-          {/* Auto-Selection Status */}
-          {validationResult.auto_selection && (
-            <div className={`rounded-lg p-4 mb-6 ${
-              validationResult.auto_selection.applied 
-                ? 'bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800' 
-                : 'bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800'
-            }`}>
-              <div className="flex items-center gap-3">
-                {validationResult.auto_selection.applied ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                ) : (
-                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                )}
-                <div>
-                  <h4 className={`font-semibold ${
-                    validationResult.auto_selection.applied 
-                      ? 'text-green-800 dark:text-green-200' 
-                      : 'text-yellow-800 dark:text-yellow-200'
-                  }`}>
-                    {validationResult.auto_selection.applied ? 'Auto-Selection Applied' : 'Auto-Selection Skipped'}
-                  </h4>
-                  <p className={`text-sm ${
-                    validationResult.auto_selection.applied 
-                      ? 'text-green-700 dark:text-green-300' 
-                      : 'text-yellow-700 dark:text-yellow-300'
-                  }`}>
-                    {validationResult.auto_selection.applied 
-                      ? `Build sheet authority applied: ${validationResult.auto_selection.accessories_added || 0} accessories added, ${validationResult.auto_selection.accessories_removed || 0} accessories removed. Bookout values have been updated in the database.`
-                      : validationResult.auto_selection.reason || validationResult.auto_selection.error || 'Unknown reason'
-                    }
-                  </p>
-                  {validationResult.auto_selection.applied && validationResult.auto_selection.changes_detail && (
-                    <div className="mt-2 text-xs">
-                      {validationResult.auto_selection.changes_detail.added?.length > 0 && (
-                        <div className="text-green-600">
-                          <strong>Added:</strong> {validationResult.auto_selection.changes_detail.added.join(', ')}
-                        </div>
-                      )}
-                      {validationResult.auto_selection.changes_detail.removed?.length > 0 && (
-                        <div className="text-red-600">
-                          <strong>Removed:</strong> {validationResult.auto_selection.changes_detail.removed.join(', ')}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Summary Section */}
           <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6">
@@ -498,14 +676,49 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
                         </div>
                       </TableCell>
                       <TableCell className="max-w-xs py-2 px-3">
-                        <div className="text-xs text-gray-600 dark:text-gray-400">
-                          {comparison.notes}
-                        </div>
-                        {comparison.recommendations && (
-                          <div className="mt-1 text-xs text-red-600 dark:text-red-400">
-                            {comparison.recommendations}
+                        <div className="space-y-2">
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            {comparison.notes}
                           </div>
-                        )}
+                          {comparison.recommendations && (
+                            <div className="text-xs text-red-600 dark:text-red-400">
+                              {comparison.recommendations}
+                            </div>
+                          )}
+                          {(() => {
+                            // Only show override button if build sheet would change the selection
+                            const isNotFound = comparison.validation_status === 'NOT_FOUND';
+                            const isConfirmed = comparison.validation_status === 'CONFIRMED' || comparison.validation_status === 'PARTIAL_MATCH';
+                            
+                            if (!isNotFound && !isConfirmed) {
+                              return null; // No change recommended
+                            }
+
+                            const isOverridden = localOverrides.has(comparison.jd_power_accessory.code);
+
+                            return (
+                              <Button
+                                size="sm"
+                                variant={isOverridden ? "default" : "outline"}
+                                onClick={() => {
+                                  const newOverrides = new Set(localOverrides);
+                                  if (isOverridden) {
+                                    newOverrides.delete(comparison.jd_power_accessory.code);
+                                  } else {
+                                    newOverrides.add(comparison.jd_power_accessory.code);
+                                  }
+                                  setLocalOverrides(newOverrides);
+                                  if (currentSessionId) {
+                                    handleOverride(comparison.jd_power_accessory.code);
+                                  }
+                                }}
+                                className="h-6 text-xs px-2"
+                              >
+                                {isOverridden ? 'Overridden' : 'Override'}
+                              </Button>
+                            );
+                          })()}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

@@ -439,116 +439,90 @@ Focus on intelligent matching rather than exact string matches. Most automotive 
       // Continue with validation even if snapshot fails
     }
 
-    // NOW THE MAGIC: Auto-select/deselect accessories based on AI validation results WITH CHANGE TRACKING
+    // CREATE VALIDATION SESSION instead of auto-applying changes
     try {
-      // Get accessories to ADD (confirmed/partial matches with build sheet)
-      const accessoriesToAdd = validationResult.comparisons
-        .filter((comp: any) => comp.validation_status === 'CONFIRMED' || comp.validation_status === 'PARTIAL_MATCH')
-        .map((comp: any) => ({
-          code: comp.jd_power_accessory.code,
-          name: comp.jd_power_accessory.name,
-          status: comp.validation_status,
-          confidence: comp.confidence_score
-        }));
-
-      // Get accessories to REMOVE (not found in build sheet)
-      const accessoriesToRemove = validationResult.comparisons
-        .filter((comp: any) => comp.validation_status === 'NOT_FOUND')
-        .map((comp: any) => ({
-          code: comp.jd_power_accessory.code,
-          name: comp.jd_power_accessory.name,
-          status: comp.validation_status,
-          confidence: comp.confidence_score
-        }));
-
-      console.log('Auto-selecting accessories (to ADD):', accessoriesToAdd);
-      console.log('Auto-deselecting accessories (to REMOVE):', accessoriesToRemove);
-
-      if (accessoriesToAdd.length > 0 || accessoriesToRemove.length > 0) {
-        console.log('Sending accessory changes to update API...');
-
-        // Get current accessory selections
-        const currentAccessories = await db.bookoutAccessory.findMany({
-          where: { bookoutId: latestBookout.id }
-        });
-
-        // Create final selection list: current selections + additions - removals
-        const allCurrentlySelected = currentAccessories
-          .filter(acc => acc.isSelected)
-          .map(acc => acc.code);
-        
-        const accessoriesToAddCodes = accessoriesToAdd.map(acc => acc.code);
-        const accessoriesToRemoveCodes = accessoriesToRemove.map(acc => acc.code);
-        
-        // Final selection: remove NOT_FOUND items, add CONFIRMED/PARTIAL_MATCH items
-        const finalSelectedCodes = [
-          ...allCurrentlySelected.filter(code => !accessoriesToRemoveCodes.includes(code)), // Remove NOT_FOUND
-          ...accessoriesToAddCodes.filter(code => !allCurrentlySelected.includes(code)) // Add new CONFIRMED/PARTIAL_MATCH
-        ];
-
-        console.log('Final selected accessory codes:', finalSelectedCodes);
-
-        // Update accessory selections using our enhanced API endpoint
-        const accessoryUpdateResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/vehicles/${vehicle.uuid}/bookout/${latestBookout.id}/accessories`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cookie': request.headers.get('cookie') || '' // Forward session cookie
-          },
-          body: JSON.stringify({
-            selectedAccessoryCodes: finalSelectedCodes,
-            changeTrackingValidationId: validation.id // Pass validation ID for change tracking
-          })
-        });
-
-        if (accessoryUpdateResponse.ok) {
-          const updateResult = await accessoryUpdateResponse.json();
-          console.log('Successfully auto-selected accessories:', updateResult.totals);
-          
-          // CRITICAL: Store the updated bookout data to return to frontend
-          const updatedBookoutData = updateResult.bookout;
-          
-          // Add auto-selection info to response
-          validationResult.auto_selection = {
-            applied: true,
-            accessories_added: accessoriesToAdd.length,
-            accessories_removed: accessoriesToRemove.length,
-            total_accessories_changed: accessoriesToAdd.length + accessoriesToRemove.length,
-            final_selected_count: finalSelectedCodes.length,
-            total_value_impact: updateResult.totals,
-            revaluation_source: updateResult.revaluation?.source || 'unknown',
-            changes_detail: {
-              added: accessoriesToAdd.map(acc => `${acc.name} (${acc.code})`),
-              removed: accessoriesToRemove.map(acc => `${acc.name} (${acc.code})`)
-            },
-            updated_bookout: updatedBookoutData // SEND UPDATED BOOKOUT TO FRONTEND
-          };
-        } else {
-          console.error('Failed to auto-select accessories:', accessoryUpdateResponse.status);
-          validationResult.auto_selection = {
-            applied: false,
-            error: 'Failed to update accessory selections'
-          };
+      // Create validation session with 24-hour expiry
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+      
+      const session = await db.validationSession.create({
+        data: {
+          validationId: validation.id,
+          vehicleId: vehicle.uuid,
+          bookoutId: latestBookout.id,
+          expiresAt: expiresAt
         }
-      } else {
-        validationResult.auto_selection = {
-          applied: false,
-          reason: 'No accessory changes needed - bookout already matches build sheet perfectly',
-          accessories_added: 0,
-          accessories_removed: 0,
-          total_accessories_changed: 0
-        };
-      }
-    } catch (autoSelectError) {
-      console.error('Error in auto-selection process:', autoSelectError);
-      validationResult.auto_selection = {
-        applied: false,
-        error: 'Auto-selection process failed'
+      });
+
+      console.log('Created validation session:', session.id);
+
+      // Get current accessory selections
+      const currentAccessories = await db.bookoutAccessory.findMany({
+        where: { bookoutId: latestBookout.id }
+      });
+
+      // Create override records for each accessory that would change
+      const overridePromises = validationResult.comparisons.map(async (comp: any) => {
+        const currentAccessory = currentAccessories.find(acc => acc.code === comp.jd_power_accessory.code);
+        const isCurrentlySelected = currentAccessory?.isSelected || false;
+        
+        // Determine what build sheet says to do
+        let buildSheetSays = 'NO_CHANGE';
+        if (comp.validation_status === 'CONFIRMED' || comp.validation_status === 'PARTIAL_MATCH') {
+          buildSheetSays = 'SELECT';
+        } else if (comp.validation_status === 'NOT_FOUND') {
+          buildSheetSays = 'DESELECT';
+        }
+
+        // Only create override record if build sheet would change the selection
+        if ((buildSheetSays === 'SELECT' && !isCurrentlySelected) || 
+            (buildSheetSays === 'DESELECT' && isCurrentlySelected)) {
+          return db.accessoryOverride.create({
+            data: {
+              sessionId: session.id,
+              accessoryCode: comp.jd_power_accessory.code,
+              accessoryName: comp.jd_power_accessory.name,
+              aiRecommendation: buildSheetSays,
+              originalSelected: isCurrentlySelected,
+              keepJdPower: false // Default: follow build sheet recommendation
+            }
+          });
+        }
+      });
+
+      const overrides = await Promise.all(overridePromises.filter(Boolean));
+      console.log('Created override records:', overrides.length);
+
+      // Calculate summary statistics
+      const recommendedSelections = overrides.filter(o => o?.aiRecommendation === 'SELECT').length;
+      const recommendedDeselections = overrides.filter(o => o?.aiRecommendation === 'DESELECT').length;
+
+      // Add session info to response
+      validationResult.session = {
+        id: session.id,
+        status: 'pending',
+        expiresAt: session.expiresAt,
+        changes_pending: {
+          recommendations_to_add: recommendedSelections,
+          recommendations_to_remove: recommendedDeselections,
+          total_changes: recommendedSelections + recommendedDeselections
+        }
+      };
+
+      // Remove old auto_selection field to avoid confusion
+      delete validationResult.auto_selection;
+
+    } catch (sessionError) {
+      console.error('Error creating validation session:', sessionError);
+      validationResult.session = {
+        error: 'Failed to create validation session',
+        details: sessionError instanceof Error ? sessionError.message : 'Unknown error'
       };
     }
 
     return NextResponse.json({
       validation_id: validation.id,
+      session_id: validationResult.session?.id || null,
       vehicle: {
         vin: vehicle.vin,
         year: latestBookout.year,
