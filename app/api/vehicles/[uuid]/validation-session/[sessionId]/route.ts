@@ -124,7 +124,7 @@ export const PATCH = requireOrganization(async (request: NextRequest, context, {
     }
 
     // Get current override state
-    const currentOverride = await db.accessoryOverride.findUnique({
+    let currentOverride = await db.accessoryOverride.findUnique({
       where: {
         sessionId_accessoryCode: {
           sessionId: sessionId,
@@ -133,12 +133,17 @@ export const PATCH = requireOrganization(async (request: NextRequest, context, {
       }
     });
 
-    if (!currentOverride) {
-      return NextResponse.json({ error: 'Override not found' }, { status: 404 });
-    }
+    let updatedOverride;
 
+    if (!currentOverride) {
+      // This should not happen anymore since we create all overrides upfront
+      return NextResponse.json({ 
+        error: 'Override record not found. Please re-run validation.' 
+      }, { status: 404 });
+    }
+    
     // Toggle the keepJdPower flag
-    const updatedOverride = await db.accessoryOverride.update({
+    updatedOverride = await db.accessoryOverride.update({
       where: {
         sessionId_accessoryCode: {
           sessionId: sessionId,

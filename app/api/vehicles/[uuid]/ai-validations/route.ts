@@ -20,7 +20,7 @@ export const GET = requireOrganization(async (request: NextRequest, context, { p
       return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
     }
 
-    // Get all AI validations for this vehicle
+    // Get all AI validations for this vehicle with their sessions
     const validations = await db.aIValidation.findMany({
       where: {
         vehicleId: uuid
@@ -34,7 +34,18 @@ export const GET = requireOrganization(async (request: NextRequest, context, { p
         validationType: true,
         outputData: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        sessions: {
+          orderBy: {
+            createdAt: 'desc'
+          },
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            expiresAt: true
+          }
+        }
       }
     });
 

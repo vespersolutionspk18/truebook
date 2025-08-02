@@ -65,59 +65,218 @@ export const POST = requireOrganization(async (request: NextRequest, context, { 
       where: { bookoutId: bookout.id }
     });
 
-    // Calculate final accessory selections based on overrides
+    // Calculate final accessory selections
     const finalSelections = new Set<string>();
+    const changedAccessories: Array<{code: string, name: string, action: string}> = [];
     
-    // Start with current selections
+    // Create a map of current accessories for quick lookup
+    const accessoryMap = new Map<string, any>();
     currentAccessories.forEach(acc => {
-      if (acc.isSelected) {
+      accessoryMap.set(acc.code, acc);
+    });
+    
+    // Process all accessories (not just those with overrides)
+    currentAccessories.forEach(acc => {
+      const override = session.overrides.find(o => o.accessoryCode === acc.code);
+      const currentlySelected = acc.isSelected;
+      let shouldBeSelected = currentlySelected;
+      
+      console.log(`Processing accessory ${acc.code} (${acc.name}):`, {
+        currentlySelected,
+        hasOverride: !!override,
+        aiRecommendation: override?.aiRecommendation,
+        keepJdPower: override?.keepJdPower
+      });
+      
+      if (override) {
+        if (override.keepJdPower) {
+          // keepJdPower = true means "keep the current JD Power selection, ignore AI recommendation"
+          // So we keep the current state unchanged
+          shouldBeSelected = currentlySelected;
+          console.log(`Override for ${acc.code}: keeping JD Power selection (${currentlySelected})`);
+        } else {
+          // Follow AI recommendation
+          if (override.aiRecommendation === 'SELECT') {
+            shouldBeSelected = true;
+            if (!currentlySelected) {
+              console.log(`Adding accessory ${acc.code} based on AI recommendation`);
+              changedAccessories.push({
+                code: override.accessoryCode,
+                name: override.accessoryName,
+                action: 'Added (AI recommendation)'
+              });
+            }
+          } else if (override.aiRecommendation === 'DESELECT') {
+            shouldBeSelected = false;
+            if (currentlySelected) {
+              console.log(`Removing accessory ${acc.code} based on AI recommendation`);
+              changedAccessories.push({
+                code: override.accessoryCode,
+                name: override.accessoryName,
+                action: 'Removed (AI recommendation)'
+              });
+            } else {
+              console.log(`Accessory ${acc.code} already deselected, no change needed`);
+            }
+          }
+          // NO_CHANGE means keep current state
+        }
+      } else {
+        console.log(`No override found for accessory ${acc.code}, keeping current state`);
+      }
+      // If no override exists, keep current state
+      
+      console.log(`Final decision for ${acc.code}: shouldBeSelected = ${shouldBeSelected}`);
+      
+      if (shouldBeSelected) {
         finalSelections.add(acc.code);
       }
     });
 
-    // Apply overrides - by default follow build sheet, unless keepJdPower is true
-    session.overrides.forEach(override => {
-      if (override.keepJdPower) {
-        // Keep JD Power selection
-        if (override.originalSelected) {
-          finalSelections.add(override.accessoryCode);
+    console.log('Apply session debug:', {
+      totalAccessories: currentAccessories.length,
+      totalOverrides: session.overrides.length,
+      currentlySelected: currentAccessories.filter(a => a.isSelected).length,
+      finalSelections: finalSelections.size,
+      finalSelectionCodes: Array.from(finalSelections),
+      changedAccessories: changedAccessories.length,
+      overridesWithKeepJdPower: session.overrides.filter(o => o.keepJdPower).length,
+      overridesWithSelect: session.overrides.filter(o => o.aiRecommendation === 'SELECT').length,
+      overridesWithDeselect: session.overrides.filter(o => o.aiRecommendation === 'DESELECT').length
+    });
+
+    // If no changes, analyze why
+    if (changedAccessories.length === 0) {
+      console.log('NO CHANGES DETECTED - Analyzing why:');
+      
+      // Check DESELECT recommendations
+      const deselectOverrides = session.overrides.filter(o => o.aiRecommendation === 'DESELECT');
+      console.log(`Found ${deselectOverrides.length} DESELECT recommendations:`);
+      
+      deselectOverrides.forEach(override => {
+        const accessory = currentAccessories.find(a => a.code === override.accessoryCode);
+        console.log(`  - ${override.accessoryCode} (${override.accessoryName}):`);
+        console.log(`    - Currently selected: ${accessory?.isSelected}`);
+        console.log(`    - Keep JD Power: ${override.keepJdPower}`);
+        console.log(`    - Original selected: ${override.originalSelected}`);
+        
+        if (!accessory?.isSelected) {
+          console.log(`    → Already deselected, no change needed`);
+        } else if (override.keepJdPower) {
+          console.log(`    → User overrode to keep JD Power selection`);
         } else {
-          finalSelections.delete(override.accessoryCode);
+          console.log(`    → SHOULD BE DESELECTED BUT WASN'T - THIS IS A BUG!`);
         }
-      } else {
-        // Follow build sheet recommendation
-        if (override.aiRecommendation === 'SELECT') {
-          finalSelections.add(override.accessoryCode);
-        } else if (override.aiRecommendation === 'DESELECT') {
-          finalSelections.delete(override.accessoryCode);
+      });
+      
+      // Check SELECT recommendations
+      const selectOverrides = session.overrides.filter(o => o.aiRecommendation === 'SELECT');
+      console.log(`\nFound ${selectOverrides.length} SELECT recommendations:`);
+      
+      selectOverrides.forEach(override => {
+        const accessory = currentAccessories.find(a => a.code === override.accessoryCode);
+        console.log(`  - ${override.accessoryCode} (${override.accessoryName}):`);
+        console.log(`    - Currently selected: ${accessory?.isSelected}`);
+        console.log(`    - Keep JD Power: ${override.keepJdPower}`);
+        
+        if (accessory?.isSelected) {
+          console.log(`    → Already selected, no change needed`);
+        } else if (override.keepJdPower) {
+          console.log(`    → User overrode to keep JD Power selection`);
+        } else {
+          console.log(`    → SHOULD BE SELECTED BUT WASN'T - THIS IS A BUG!`);
         }
+      });
+    }
+    
+    // Debug: Show details of DESELECT overrides
+    const deselectOverrides = session.overrides.filter(o => o.aiRecommendation === 'DESELECT');
+    console.log('DESELECT overrides details:', deselectOverrides.map(o => ({
+      code: o.accessoryCode,
+      name: o.accessoryName,
+      keepJdPower: o.keepJdPower,
+      originalSelected: o.originalSelected
+    })));
+
+    // Check if there are actually any changes to make
+    const currentSelections = new Set(currentAccessories.filter(a => a.isSelected).map(a => a.code));
+    const selectionsMatch = currentSelections.size === finalSelections.size && 
+                           Array.from(currentSelections).every(code => finalSelections.has(code));
+    
+    if (selectionsMatch && changedAccessories.length === 0) {
+      console.log('CRITICAL: No actual changes to make - current selections already match final selections');
+      console.log('Current selections:', Array.from(currentSelections));
+      console.log('Final selections:', Array.from(finalSelections));
+    }
+
+    // Update accessories directly in database
+    await db.$transaction(async (tx) => {
+      // First, set all accessories as not selected
+      await tx.bookoutAccessory.updateMany({
+        where: { bookoutId: bookout.id },
+        data: { isSelected: false }
+      });
+
+      // Then select the specified accessories
+      if (finalSelections.size > 0) {
+        await tx.bookoutAccessory.updateMany({
+          where: { 
+            bookoutId: bookout.id,
+            code: { in: Array.from(finalSelections) }
+          },
+          data: { isSelected: true }
+        });
       }
     });
 
-    console.log('Final accessory selections:', Array.from(finalSelections));
+    // Get updated accessories for revaluation
+    const updatedAccessories = await db.bookoutAccessory.findMany({
+      where: { bookoutId: bookout.id, isSelected: true }
+    });
+    const selectedCodes = updatedAccessories.map(acc => acc.code);
 
-    // Update bookout using the existing accessory update endpoint
-    const accessoryUpdateResponse = await fetch(
-      `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/vehicles/${vehicle.uuid}/bookout/${bookout.id}/accessories`, 
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': request.headers.get('cookie') || ''
-        },
-        body: JSON.stringify({
-          selectedAccessoryCodes: Array.from(finalSelections),
-          changeTrackingValidationId: session.validationId
-        })
-      }
-    );
+    // Get fresh valuation from JD Power
+    const { revaluateWithSelectedAccessories } = await import('@/lib/jdpower-revaluation');
+    const revaluationResult = await revaluateWithSelectedAccessories({
+      vin: vehicle.vin,
+      ucgVehicleId: bookout.ucgVehicleId!,
+      period: '0',
+      region: bookout.region || 1,
+      mileage: bookout.mileage || undefined,
+      selectedAccessoryCodes: selectedCodes,
+      vehicletype: 'UsedCar'
+    });
 
-    if (!accessoryUpdateResponse.ok) {
-      const errorData = await accessoryUpdateResponse.json();
-      throw new Error(errorData.error || 'Failed to update accessories');
+    let updatedBookout;
+    if (revaluationResult.success && revaluationResult.updatedValues) {
+      const values = revaluationResult.updatedValues;
+      console.log('Updating bookout with revaluation results:', {
+        cleanTradeIn: values.adjustedCleanTradeIn,
+        cleanRetail: values.adjustedCleanRetail,
+        loanValue: values.adjustedLoanValue,
+        accessoryAdjustments: values.accessoryAdjustments
+      });
+      
+      updatedBookout = await db.bookout.update({
+        where: { id: bookout.id },
+        data: {
+          cleanTradeIn: values.adjustedCleanTradeIn,
+          cleanRetail: values.adjustedCleanRetail,
+          loanValue: values.adjustedLoanValue,
+          averageTradeIn: values.adjustedAverageTradeIn,
+          roughTradeIn: values.adjustedRoughTradeIn,
+          vinOptionsTradeIn: values.accessoryAdjustments.tradeIn,
+          vinOptionsRetail: values.accessoryAdjustments.retail,
+          vinOptionsLoan: values.accessoryAdjustments.loan
+        }
+      });
+      
+      console.log('Bookout updated successfully:', updatedBookout.id);
+    } else {
+      // Fallback calculation if JD Power fails
+      console.warn('JD Power revaluation failed, using fallback calculation');
+      updatedBookout = bookout;
     }
-
-    const updateResult = await accessoryUpdateResponse.json();
 
     // Mark session as applied
     await db.validationSession.update({
@@ -128,28 +287,37 @@ export const POST = requireOrganization(async (request: NextRequest, context, { 
       }
     });
 
-    // Log the application of changes
-    const { BookoutSnapshotManager } = await import('@/lib/bookout-snapshot');
-    const snapshotManager = new BookoutSnapshotManager(session.validationId, bookout.id);
-    
-    // Log each override decision
-    for (const override of session.overrides) {
-      if (override.keepJdPower) {
-        const accessory = currentAccessories.find(a => a.code === override.accessoryCode);
-        if (accessory) {
-          snapshotManager.logAccessoryChange(
-            accessory.id,
-            override.accessoryCode,
-            override.originalSelected,
-            `User override: Kept JD Power selection instead of build sheet recommendation`,
-            1.0,
-            'USER_OVERRIDE'
-          );
+    // Simple change log
+    if (changedAccessories.length > 0) {
+      await db.bookoutChangeLog.create({
+        data: {
+          validationId: session.validationId,
+          bookoutId: bookout.id,
+          changeType: 'bookout_revalued',
+          entityType: 'bookout',
+          fieldName: 'accessories_updated',
+          beforeValue: JSON.stringify({ selectedCount: currentAccessories.filter(a => a.isSelected).length }),
+          afterValue: JSON.stringify({ selectedCount: finalSelections.size, changes: changedAccessories }),
+          reason: 'Applied AI validation with user overrides',
+          sequence: 1
         }
-      }
+      });
     }
-    
-    await snapshotManager.saveChanges();
+
+    // CRITICAL DEBUG: Explain why no changes were made
+    if (changedAccessories.length === 0) {
+      console.log('=== NO CHANGES ANALYSIS ===');
+      console.log('Selected accessories before:', currentAccessories.filter(a => a.isSelected).map(a => a.code));
+      console.log('Selected accessories after:', Array.from(finalSelections));
+      console.log('Accessories that should be deselected (NOT_FOUND):');
+      
+      deselectOverrides.forEach(override => {
+        const currentAccessory = currentAccessories.find(a => a.code === override.accessoryCode);
+        console.log(`  ${override.accessoryCode}: currently=${currentAccessory?.isSelected}, keepJdPower=${override.keepJdPower}, should=${!override.keepJdPower ? 'DESELECT' : 'KEEP'}`);
+      });
+      
+      console.log('Reason for no changes: Either accessories already deselected OR all NOT_FOUND accessories have been overridden by user');
+    }
 
     return NextResponse.json({
       message: 'Validation session applied successfully',
@@ -158,13 +326,14 @@ export const POST = requireOrganization(async (request: NextRequest, context, { 
         status: 'applied',
         appliedAt: new Date()
       },
-      bookout: updateResult.bookout,
+      bookout: updatedBookout,
       changes: {
-        totalChanges: session.overrides.length,
+        totalChanges: changedAccessories.length,
         keptJdPower: session.overrides.filter(o => o.keepJdPower).length,
         followedBuildSheet: session.overrides.filter(o => !o.keepJdPower).length,
-        finalSelections: Array.from(finalSelections).length,
-        revaluation: updateResult.revaluation
+        finalSelections: finalSelections.size,
+        details: changedAccessories,
+        revaluation: revaluationResult.success ? 'success' : 'fallback'
       }
     });
 

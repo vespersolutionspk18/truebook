@@ -140,8 +140,10 @@ export async function revaluateWithSelectedAccessories(
           totalTradeAdjustment += parseInt(accessory.tradein || '0');
           totalRetailAdjustment += parseInt(accessory.retail || '0');
           totalLoanAdjustment += parseInt(accessory.loan || '0');
+          console.log(`Accessory ${code}: Trade +${accessory.tradein || 0}, Retail +${accessory.retail || 0}, Loan +${accessory.loan || 0} (Added to totals)`);
+        } else {
+          console.log(`Accessory ${code}: Already included in base value, not adding adjustments`);
         }
-        console.log(`Accessory ${code}: Trade +${accessory.tradein || 0}, Retail +${accessory.retail || 0}, Loan +${accessory.loan || 0}`);
       } else {
         console.warn(`Accessory ${code} not found in JD Power data`);
       }

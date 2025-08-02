@@ -304,6 +304,11 @@ ${buildSheetFeatures.length > 0 ?
 If a build sheet feature exists but you cannot find ANY similar JD Power accessory, list it in "missing_from_bookout". 
 If you find a close match in the JD Power list, include it in comparisons with appropriate status.
 
+**CRITICAL REQUIREMENT:**
+You MUST include a comparison entry for EVERY SINGLE JD Power accessory listed above (all ${bookoutAccessories.length} accessories).
+Even if an accessory has no match in the build sheet, you MUST include it with validation_status: "NOT_FOUND".
+The comparisons array MUST have exactly ${bookoutAccessories.length} entries - one for each JD Power accessory.
+
 **OUTPUT JSON:**
 {
   "summary": {
@@ -348,7 +353,12 @@ If you find a close match in the JD Power list, include it in comparisons with a
 Focus on intelligent matching rather than exact string matches. Most automotive features have corresponding build sheet entries with different terminology.
 `;
 
-    console.log('Sending prompt to Gemini:', prompt);
+    console.log('Sending request to Gemini API...');
+    console.log('API URL:', API_URL);
+    console.log('Request body preview:', {
+      contents_length: 1,
+      prompt_length: prompt.length
+    });
 
     const response = await fetch(API_URL, {
       method: 'POST',
@@ -364,44 +374,69 @@ Focus on intelligent matching rather than exact string matches. Most automotive 
       })
     });
 
+    console.log('Gemini response status:', response.status);
+    console.log('Gemini response ok:', response.ok);
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Gemini API request failed: ${errorData.error?.message || response.statusText}`);
+      const errorText = await response.text();
+      console.error('Gemini API error response:', errorText);
+      
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        errorData = { message: errorText };
+      }
+      
+      throw new Error(`Gemini API request failed: ${errorData.error?.message || errorData.message || response.statusText}`);
     }
 
     const data = await response.json();
+    console.log('Gemini response data structure:', {
+      has_candidates: !!data.candidates,
+      candidates_length: data.candidates?.length,
+      has_content: !!data.candidates?.[0]?.content,
+      has_parts: !!data.candidates?.[0]?.content?.parts,
+      parts_length: data.candidates?.[0]?.content?.parts?.length
+    });
     
     if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
+      console.error('Invalid Gemini response structure:', JSON.stringify(data, null, 2));
       throw new Error('Invalid response format from Gemini API');
     }
 
     const text = data.candidates[0].content.parts[0].text.trim();
-    console.log('Gemini response:', text);
+    console.log('Gemini response text length:', text.length);
+    console.log('Gemini response preview:', text.substring(0, 200) + '...');
 
     // Parse the JSON response
     let validationResult;
     try {
       // Clean the response text - remove markdown formatting if present
       let responseText = text;
-      if (responseText.startsWith('```json')) {
-        responseText = responseText.replace(/^```json\n/, '').replace(/\n```$/, '');
-      } else if (responseText.startsWith('```')) {
-        responseText = responseText.replace(/^```\n/, '').replace(/\n```$/, '');
-      }
       
-      // Extract JSON from the response (in case there's additional text)
+      // Remove markdown code block formatting
+      responseText = responseText.replace(/^```(?:json)?\s*\n?/i, '');
+      responseText = responseText.replace(/\n?```\s*$/i, '');
+      
+      // Try to extract JSON object from the text
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        validationResult = JSON.parse(jsonMatch[0]);
-      } else {
-        validationResult = JSON.parse(responseText);
+        responseText = jsonMatch[0];
       }
+      
+      console.log('Attempting to parse JSON:', responseText.substring(0, 100) + '...');
+      validationResult = JSON.parse(responseText);
+      console.log('Successfully parsed validation result');
+      
     } catch (parseError) {
       console.error('Failed to parse Gemini response as JSON:', parseError);
+      console.error('Raw text that failed to parse:', text);
       return NextResponse.json({
         error: 'Failed to parse AI response',
         details: 'The AI returned an invalid response format',
-        raw_response: text
+        raw_response: text,
+        parse_error: parseError instanceof Error ? parseError.message : 'Unknown parse error'
       }, { status: 500 });
     }
 
@@ -461,7 +496,26 @@ Focus on intelligent matching rather than exact string matches. Most automotive 
         where: { bookoutId: latestBookout.id }
       });
 
-      // Create override records for each accessory that would change
+      console.log('AI Validation debug:', {
+        totalBookoutAccessories: currentAccessories.length,
+        totalComparisons: validationResult.comparisons.length,
+        bookoutAccessoryCodes: currentAccessories.map(a => a.code),
+        comparisonAccessoryCodes: validationResult.comparisons.map((c: any) => c.jd_power_accessory.code)
+      });
+
+      // Log NOT_FOUND accessories
+      const notFoundComparisons = validationResult.comparisons.filter((comp: any) => 
+        comp.validation_status === 'NOT_FOUND'
+      );
+      console.log(`AI Validation found ${notFoundComparisons.length} NOT_FOUND accessories:`);
+      notFoundComparisons.forEach((comp: any) => {
+        const currentAcc = currentAccessories.find(acc => acc.code === comp.jd_power_accessory.code);
+        console.log(`  - ${comp.jd_power_accessory.code} (${comp.jd_power_accessory.name})`);
+        console.log(`    - Currently selected: ${currentAcc?.isSelected}`);
+        console.log(`    - Reason: ${comp.notes}`);
+      });
+
+      // Create override records for ALL accessories so user can override any of them
       const overridePromises = validationResult.comparisons.map(async (comp: any) => {
         const currentAccessory = currentAccessories.find(acc => acc.code === comp.jd_power_accessory.code);
         const isCurrentlySelected = currentAccessory?.isSelected || false;
@@ -472,26 +526,60 @@ Focus on intelligent matching rather than exact string matches. Most automotive 
           buildSheetSays = 'SELECT';
         } else if (comp.validation_status === 'NOT_FOUND') {
           buildSheetSays = 'DESELECT';
+          console.log(`Creating DESELECT override for ${comp.jd_power_accessory.code} - currently selected: ${isCurrentlySelected}`);
         }
 
-        // Only create override record if build sheet would change the selection
-        if ((buildSheetSays === 'SELECT' && !isCurrentlySelected) || 
-            (buildSheetSays === 'DESELECT' && isCurrentlySelected)) {
-          return db.accessoryOverride.create({
-            data: {
-              sessionId: session.id,
-              accessoryCode: comp.jd_power_accessory.code,
-              accessoryName: comp.jd_power_accessory.name,
-              aiRecommendation: buildSheetSays,
-              originalSelected: isCurrentlySelected,
-              keepJdPower: false // Default: follow build sheet recommendation
-            }
-          });
-        }
+        console.log(`Creating override for ${comp.jd_power_accessory.code}:`, {
+          validationStatus: comp.validation_status,
+          currentlySelected: isCurrentlySelected,
+          aiRecommendation: buildSheetSays,
+          willNeedDeselection: buildSheetSays === 'DESELECT' && isCurrentlySelected
+        });
+
+        // Create override record for EVERY accessory
+        return db.accessoryOverride.create({
+          data: {
+            sessionId: session.id,
+            accessoryCode: comp.jd_power_accessory.code,
+            accessoryName: comp.jd_power_accessory.name,
+            aiRecommendation: buildSheetSays,
+            originalSelected: isCurrentlySelected,
+            keepJdPower: false // Default: follow build sheet recommendation
+          }
+        });
       });
 
       const overrides = await Promise.all(overridePromises.filter(Boolean));
       console.log('Created override records:', overrides.length);
+      
+
+      // CRITICAL: Check if we have override records for ALL accessories
+      if (overrides.length !== currentAccessories.length) {
+        console.warn(`WARNING: Only created ${overrides.length} override records for ${currentAccessories.length} accessories!`);
+        
+        // Create override records for any missing accessories
+        const coveredCodes = new Set(overrides.map(o => o?.accessoryCode).filter(Boolean));
+        const missingAccessories = currentAccessories.filter(acc => !coveredCodes.has(acc.code));
+        
+        if (missingAccessories.length > 0) {
+          console.log(`Creating override records for ${missingAccessories.length} missing accessories`);
+          const missingOverrides = await Promise.all(
+            missingAccessories.map(acc => 
+              db.accessoryOverride.create({
+                data: {
+                  sessionId: session.id,
+                  accessoryCode: acc.code,
+                  accessoryName: acc.name,
+                  aiRecommendation: 'NO_CHANGE', // No AI recommendation for these
+                  originalSelected: acc.isSelected,
+                  keepJdPower: false // Default: follow current state
+                }
+              })
+            )
+          );
+          overrides.push(...missingOverrides);
+        }
+      }
 
       // Calculate summary statistics
       const recommendedSelections = overrides.filter(o => o?.aiRecommendation === 'SELECT').length;

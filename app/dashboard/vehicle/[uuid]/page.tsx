@@ -214,6 +214,12 @@ export default function VehicleDetailsPage() {
       console.log('JD Power bookout:', bookout);
       console.log('Accessories:', bookout.accessories);
       console.log('Accessories length:', bookout.accessories?.length);
+      console.log('Accessories details:', bookout.accessories?.map(acc => ({
+        code: acc.code,
+        name: acc.name,
+        isSelected: acc.isSelected,
+        isAvailable: acc.isAvailable
+      })));
     }
     return bookout;
   };
@@ -425,7 +431,7 @@ export default function VehicleDetailsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="ai-comparison">
+        <TabsContent value="ai-comparison" forceMount>
           <Card>
             <CardHeader>
               <CardTitle>AI Comparison</CardTitle>

@@ -176,13 +176,24 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
   const [sessionOverrides, setSessionOverrides] = useState<Map<string, any>>(new Map());
   const [isApplyingSession, setIsApplyingSession] = useState(false);
   const [sessionDetails, setSessionDetails] = useState<any>(null);
-  const [localOverrides, setLocalOverrides] = useState<Set<string>>(new Set());
+  const [overriddenAccessories, setOverriddenAccessories] = useState<Set<string>>(new Set());
+  const [currentBookout, setCurrentBookout] = useState<any>(null);
+  
+  // Debug mounting/unmounting
+  useEffect(() => {
+    console.log('AIValidationComponent MOUNTED');
+    return () => {
+      console.log('AIValidationComponent UNMOUNTED - state will be lost!');
+    };
+  }, []);
 
   const loadSessionOverrides = async (sessionId: string) => {
     try {
+      console.log('Loading session overrides for:', sessionId);
       const response = await fetch(`/api/vehicles/${vehicleUuid}/validation-session/${sessionId}`);
       if (response.ok) {
         const data = await response.json();
+        console.log('Session details loaded:', data.session);
         setSessionDetails(data.session);
         
         // Create a map of overrides for easy lookup
@@ -192,14 +203,22 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
         });
         setSessionOverrides(overridesMap);
         
-        // Also update local overrides based on keepJdPower flag
-        const localOverridesSet = new Set<string>();
+        // Load overrides - accessories that user wants to keep despite AI recommendation
+        const overriddenSet = new Set<string>();
         data.session.overrides.forEach((override: any) => {
+          // If keepJdPower is true, it means user wants to keep the original selection
+          // despite what AI recommends
           if (override.keepJdPower) {
-            localOverridesSet.add(override.accessoryCode);
+            overriddenSet.add(override.accessoryCode);
           }
         });
-        setLocalOverrides(localOverridesSet);
+        setOverriddenAccessories(overriddenSet);
+        
+        console.log('Loaded overrides:', {
+          totalOverrides: data.session.overrides.length,
+          keepingJdPower: overriddenSet.size,
+          overrideCodes: Array.from(overriddenSet)
+        });
       }
     } catch (err) {
       console.error('Failed to load session overrides:', err);
@@ -207,7 +226,10 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
   };
 
   const handleOverride = async (accessoryCode: string) => {
-    if (!currentSessionId) return;
+    if (!currentSessionId) {
+      console.error('No session ID available');
+      return;
+    }
     
     try {
       const response = await fetch(`/api/vehicles/${vehicleUuid}/validation-session/${currentSessionId}`, {
@@ -218,16 +240,36 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Override response:', data);
+        
         // Update local state
         const updatedOverrides = new Map(sessionOverrides);
-        const existingOverride = updatedOverrides.get(accessoryCode);
-        if (existingOverride) {
-          updatedOverrides.set(accessoryCode, {
-            ...existingOverride,
-            keepJdPower: data.override.keepJdPower
-          });
-          setSessionOverrides(updatedOverrides);
+        
+        // Handle both existing and new overrides
+        updatedOverrides.set(accessoryCode, {
+          accessoryCode: data.override.accessoryCode,
+          accessoryName: data.override.accessoryName,
+          keepJdPower: data.override.keepJdPower,
+          aiRecommendation: data.override.aiRecommendation || 'NO_CHANGE'
+        });
+        setSessionOverrides(updatedOverrides);
+        
+        // Update the overridden accessories set
+        const newOverriddenSet = new Set(overriddenAccessories);
+        if (data.override.keepJdPower) {
+          newOverriddenSet.add(accessoryCode);
+        } else {
+          newOverriddenSet.delete(accessoryCode);
         }
+        setOverriddenAccessories(newOverriddenSet);
+        
+        console.log('Updated overrides:', {
+          accessoryCode,
+          keepJdPower: data.override.keepJdPower,
+          totalOverrides: newOverriddenSet.size
+        });
+        
+        console.log(`Override updated for ${accessoryCode}: keepJdPower = ${data.override.keepJdPower}`);
       } else {
         const error = await response.json();
         alert(`Failed to update override: ${error.error}`);
@@ -239,119 +281,58 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
   };
 
   const handleApplyChanges = async () => {
-    if (!validationResult) return;
+    if (!currentSessionId) {
+      setError('No validation session active');
+      return;
+    }
     
     setIsApplyingSession(true);
     setError(null);
     
     try {
-      // Get the vehicle data with bookouts
-      const vehicleResponse = await fetch(`/api/vehicles/${vehicleUuid}`);
-      if (!vehicleResponse.ok) {
-        throw new Error('Failed to get vehicle data');
-      }
-      const vehicleData = await vehicleResponse.json();
-      
-      // Find the latest JD Power bookout
-      const currentBookout = vehicleData.bookouts?.find((b: any) => b.provider === 'jdpower');
-      
-      if (!currentBookout) {
-        throw new Error('No JD Power bookout found');
-      }
-
-      // Calculate which accessories should be selected
-      const finalSelections = new Set<string>();
-      const currentSelections = new Set<string>();
-      
-      // Track current selections
-      currentBookout.accessories.forEach((acc: any) => {
-        if (acc.isSelected) {
-          currentSelections.add(acc.code);
-          finalSelections.add(acc.code);
-        }
-      });
-
-      console.log('Current selections:', Array.from(currentSelections));
-      console.log('Overrides:', Array.from(localOverrides));
-
-      // Apply AI recommendations (unless overridden)
-      let addedCount = 0;
-      let removedCount = 0;
-      
-      validationResult.comparisons.forEach((comp: any) => {
-        const accessoryCode = comp.jd_power_accessory.code;
-        const isOverridden = localOverrides.has(accessoryCode);
-        const isCurrentlySelected = currentSelections.has(accessoryCode);
-        
-        if (!isOverridden) {
-          // Follow AI recommendation
-          if (comp.validation_status === 'CONFIRMED' || comp.validation_status === 'PARTIAL_MATCH') {
-            if (!isCurrentlySelected) {
-              finalSelections.add(accessoryCode);
-              addedCount++;
-              console.log(`Adding: ${accessoryCode} - ${comp.jd_power_accessory.name}`);
-            }
-          } else if (comp.validation_status === 'NOT_FOUND') {
-            if (isCurrentlySelected) {
-              finalSelections.delete(accessoryCode);
-              removedCount++;
-              console.log(`Removing: ${accessoryCode} - ${comp.jd_power_accessory.name}`);
-            }
-          }
-        } else {
-          console.log(`Overridden (keeping original): ${accessoryCode} - ${comp.jd_power_accessory.name}`);
-        }
-      });
-
-      console.log(`Changes: ${addedCount} added, ${removedCount} removed`);
-      console.log('Final selections:', Array.from(finalSelections));
-
-      // Update the bookout with change tracking
-      const updateResponse = await fetch(
-        `/api/vehicles/${vehicleUuid}/bookout/${currentBookout.id}/accessories`,
+      // Use the proper apply session endpoint
+      const response = await fetch(
+        `/api/vehicles/${vehicleUuid}/validation-session/${currentSessionId}/apply`,
         {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            selectedAccessoryCodes: Array.from(finalSelections),
-            changeTrackingValidationId: currentValidationId // Pass validation ID for change tracking
-          })
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
         }
       );
 
-      if (!updateResponse.ok) {
-        const errorData = await updateResponse.json();
-        throw new Error(errorData.error || 'Failed to update bookout');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to apply session');
       }
 
-      const updateResult = await updateResponse.json();
-      console.log('Bookout updated:', updateResult);
+      const result = await response.json();
+      console.log('Session applied:', result);
+      
+      // Show detailed success message
+      const changes = result.changes;
+      if (changes.totalChanges > 0) {
+        let message = `Bookout updated successfully!\n\n`;
+        if (changes.details && changes.details.length > 0) {
+          message += 'Changes made:\n';
+          changes.details.forEach((change: any) => {
+            message += `• ${change.name}: ${change.action}\n`;
+          });
+        }
+        alert(message);
+      } else {
+        alert('No changes were made - all accessories are already as recommended.');
+      }
       
       // Trigger parent component to refresh vehicle data
       if (onValidationComplete) {
         onValidationComplete();
       }
       
-      // Show success message with details
-      if (addedCount > 0 || removedCount > 0) {
-        alert(`Bookout updated successfully!\n${addedCount} accessories added\n${removedCount} accessories removed`);
-      } else {
-        alert('No changes were made - all accessories are already correctly selected according to the build sheet.');
-      }
+      // Don't clear validation state - keep it visible
+      // Just mark the session as applied
+      setSessionDetails(prev => prev ? { ...prev, status: 'applied' } : null);
       
-      // Reset state
-      setLocalOverrides(new Set());
-      
-      // Reload the validation to show updated comparison
-      if (currentValidationId) {
-        const validationResponse = await fetch(`/api/vehicles/${vehicleUuid}/ai-validations/${currentValidationId}`);
-        if (validationResponse.ok) {
-          const validationData = await validationResponse.json();
-          if (validationData.validation?.outputData) {
-            setValidationResult(validationData.validation.outputData);
-          }
-        }
-      }
+      // Reload bookout data to show updated values
+      await loadVehicleBookout();
       
     } catch (err) {
       console.error('Error applying changes:', err);
@@ -388,6 +369,8 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
       const data = await response.json();
       console.log('API Response data:', data);
       console.log('Setting validation result:', data.result);
+      console.log('Validation comparisons:', data.result?.comparisons?.length);
+      console.log('First comparison:', data.result?.comparisons?.[0]);
       setValidationResult(data.result);
       setCurrentValidationId(data.validation_id);
       setCurrentSessionId(data.session_id);
@@ -396,6 +379,9 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
       if (data.session_id) {
         await loadSessionOverrides(data.session_id);
       }
+      
+      // Reload bookout data to ensure we have current state
+      await loadVehicleBookout();
     } catch (err) {
       console.error('Validation error:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -404,25 +390,66 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
     }
   };
 
+  // Load vehicle bookout data
+  const loadVehicleBookout = async () => {
+    try {
+      console.log('Loading vehicle bookout data...');
+      const vehicleResponse = await fetch(`/api/vehicles/${vehicleUuid}`);
+      if (vehicleResponse.ok) {
+        const vehicleData = await vehicleResponse.json();
+        const bookout = vehicleData.bookouts?.find((b: any) => b.provider === 'jdpower');
+        console.log('Found JD Power bookout:', bookout);
+        if (bookout) {
+          console.log('Setting currentBookout with', bookout.accessories?.length, 'accessories');
+          setCurrentBookout(bookout);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load vehicle bookout:', err);
+    }
+  };
+
   // Load most recent validation result on component mount
   useEffect(() => {
     const loadMostRecentValidation = async () => {
+      console.log('useEffect: Loading most recent validation for vehicle:', vehicleUuid);
       try {
+        // Load vehicle bookout first
+        await loadVehicleBookout();
+        
         const response = await fetch(`/api/vehicles/${vehicleUuid}/ai-validations`);
+        console.log('useEffect: AI validations response:', response.ok);
         if (response.ok) {
           const data = await response.json();
+          console.log('useEffect: Found validations:', data.validations?.length);
           if (data.validations && data.validations.length > 0) {
             const mostRecent = data.validations[0]; // Already ordered by createdAt desc
+            console.log('useEffect: Most recent validation:', mostRecent);
+            
             if (mostRecent.outputData) {
+              console.log('Setting validation result from DB');
               setValidationResult(mostRecent.outputData);
               setCurrentValidationId(mostRecent.id);
               
               // Check if there's a session for this validation
+              // First check in outputData (for backwards compatibility)
               if (mostRecent.outputData.session?.id) {
+                console.log('useEffect: Loading session overrides from outputData:', mostRecent.outputData.session.id);
                 setCurrentSessionId(mostRecent.outputData.session.id);
                 await loadSessionOverrides(mostRecent.outputData.session.id);
+              } 
+              // Then check in sessions array (new structure)
+              else if (mostRecent.sessions && mostRecent.sessions.length > 0) {
+                const latestSession = mostRecent.sessions[0];
+                if (latestSession.status === 'pending' && new Date(latestSession.expiresAt) > new Date()) {
+                  console.log('useEffect: Loading session from sessions array:', latestSession.id);
+                  setCurrentSessionId(latestSession.id);
+                  await loadSessionOverrides(latestSession.id);
+                }
               }
             }
+          } else {
+            console.log('No validations found for this vehicle');
           }
         }
       } catch (err) {
@@ -461,12 +488,17 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
               )}
             </div>
           )}
+          {!validationResult && !isValidating && (
+            <div className="text-sm text-gray-500">
+              Click "Validate" to check accessories against build sheet
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          {validationResult && (
+          {validationResult && currentSessionId && (
             <Button 
               onClick={handleApplyChanges} 
-              disabled={isApplyingSession}
+              disabled={isApplyingSession || sessionDetails?.isExpired}
               size="sm"
               className="bg-green-600 hover:bg-green-700 text-white"
             >
@@ -497,7 +529,7 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
             ) : (
               <>
                 <FileSearch className="h-4 w-4 mr-2" />
-                Validate
+                {validationResult ? 'Re-validate' : 'Validate'}
               </>
             )}
           </Button>
@@ -686,33 +718,22 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
                             </div>
                           )}
                           {(() => {
-                            // Only show override button if build sheet would change the selection
-                            const isNotFound = comparison.validation_status === 'NOT_FOUND';
-                            const isConfirmed = comparison.validation_status === 'CONFIRMED' || comparison.validation_status === 'PARTIAL_MATCH';
-                            
-                            if (!isNotFound && !isConfirmed) {
-                              return null; // No change recommended
-                            }
-
-                            const isOverridden = localOverrides.has(comparison.jd_power_accessory.code);
+                            // ALWAYS SHOW THE OVERRIDE BUTTON FOR EVERY ACCESSORY
+                            const isOverridden = overriddenAccessories.has(comparison.jd_power_accessory.code);
 
                             return (
                               <Button
                                 size="sm"
                                 variant={isOverridden ? "default" : "outline"}
                                 onClick={() => {
-                                  const newOverrides = new Set(localOverrides);
-                                  if (isOverridden) {
-                                    newOverrides.delete(comparison.jd_power_accessory.code);
-                                  } else {
-                                    newOverrides.add(comparison.jd_power_accessory.code);
+                                  if (!currentSessionId) {
+                                    alert('No validation session active. Please run validation first.');
+                                    return;
                                   }
-                                  setLocalOverrides(newOverrides);
-                                  if (currentSessionId) {
-                                    handleOverride(comparison.jd_power_accessory.code);
-                                  }
+                                  handleOverride(comparison.jd_power_accessory.code);
                                 }}
                                 className="h-6 text-xs px-2"
+                                disabled={!currentSessionId}
                               >
                                 {isOverridden ? 'Overridden' : 'Override'}
                               </Button>
