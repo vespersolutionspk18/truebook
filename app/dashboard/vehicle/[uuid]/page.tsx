@@ -431,7 +431,7 @@ export default function VehicleDetailsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="ai-comparison" forceMount>
+        <TabsContent value="ai-comparison">
           <Card>
             <CardHeader>
               <CardTitle>AI Comparison</CardTitle>
@@ -445,11 +445,24 @@ export default function VehicleDetailsPage() {
                 onValidationComplete={async () => {
                   // Refresh vehicle data to get updated bookout values
                   try {
+                    console.log('Refreshing vehicle data after validation...');
                     const response = await fetch(`/api/vehicles/${vehicle.uuid}`);
                     if (response.ok) {
                       const updatedVehicle = await response.json();
+                      console.log('Updated vehicle data received:', {
+                        bookouts: updatedVehicle.bookouts?.length,
+                        latestBookout: updatedVehicle.bookouts?.[0]?.id,
+                        cleanTradeIn: updatedVehicle.bookouts?.[0]?.cleanTradeIn,
+                        accessories: updatedVehicle.bookouts?.[0]?.accessories?.length
+                      });
                       setVehicle(updatedVehicle);
-                      console.log('Vehicle data refreshed after AI validation');
+                      console.log('Vehicle state updated successfully');
+                      
+                      // Force bookout tab to refresh if it's currently active
+                      if (expandedProvider === 'jdpower') {
+                        setExpandedProvider(null);
+                        setTimeout(() => setExpandedProvider('jdpower'), 100);
+                      }
                     }
                   } catch (error) {
                     console.error('Failed to refresh vehicle data after validation:', error);
@@ -708,7 +721,7 @@ export default function VehicleDetailsPage() {
                             <div className="flex justify-between items-center">
                               <div>
                                 <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Vehicle Equipment & Options</h4>
-                                <p className="text-sm text-gray-500 mt-1">{getLatestBookout('jdpower')!.accessories.length} items identified from VIN</p>
+                                <p className="text-sm text-gray-500 mt-1">{getLatestBookout('jdpower')!.accessories.filter((acc: any) => acc.isSelected).length} selected accessories</p>
                               </div>
                               <div className="text-right">
                                 <p className="text-xs text-gray-500">Total Equipment Value</p>
@@ -723,12 +736,14 @@ export default function VehicleDetailsPage() {
                             {/* Equipment Categories */}
                             <div className="space-y-6">
                               {Object.entries(
-                                getLatestBookout('jdpower')!.accessories.reduce((groups: any, accessory: any) => {
-                                  const category = accessory.category || 'Other Equipment';
-                                  if (!groups[category]) groups[category] = [];
-                                  groups[category].push(accessory);
-                                  return groups;
-                                }, {})
+                                getLatestBookout('jdpower')!.accessories
+                                  .filter((accessory: any) => accessory.isSelected)
+                                  .reduce((groups: any, accessory: any) => {
+                                    const category = accessory.category || 'Other Equipment';
+                                    if (!groups[category]) groups[category] = [];
+                                    groups[category].push(accessory);
+                                    return groups;
+                                  }, {})
                               ).map(([category, accessories]: [string, any]) => (
                                 <div key={category} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                                   <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">

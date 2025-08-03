@@ -20,6 +20,8 @@ export const GET = requireOrganization(async (request: NextRequest, context, { p
       return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
     }
 
+    console.log('Fetching AI validations for vehicle:', uuid);
+    
     // Get all AI validations for this vehicle with their sessions
     const validations = await db.aIValidation.findMany({
       where: {
@@ -35,11 +37,7 @@ export const GET = requireOrganization(async (request: NextRequest, context, { p
         outputData: true,
         createdAt: true,
         updatedAt: true,
-        sessions: {
-          orderBy: {
-            createdAt: 'desc'
-          },
-          take: 1,
+        validationSession: {
           select: {
             id: true,
             status: true,
@@ -49,10 +47,12 @@ export const GET = requireOrganization(async (request: NextRequest, context, { p
       }
     });
 
+    console.log('Found validations:', validations.length);
+
     return NextResponse.json({ validations });
 
   } catch (error: any) {
-    console.error('Error fetching AI validations:', error);
+    console.error('Error fetching AI validations:', error || 'Unknown error');
     return NextResponse.json({
       error: 'Failed to fetch AI validations',
       details: error instanceof Error ? error.message : 'Unknown error'

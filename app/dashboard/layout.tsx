@@ -35,8 +35,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         // Special case: vehicle pages are under inventory
         if (path === 'vehicle' && paths[index - 1] === 'dashboard') {
           breadcrumbs.push({ label: 'Inventory', href: '/dashboard/inventory' });
+          // Skip adding 'Vehicle' as a separate breadcrumb item
+        } else {
+          breadcrumbs.push({ label, href: index < paths.length - 1 ? href : undefined });
         }
-        breadcrumbs.push({ label, href: index < paths.length - 1 ? href : undefined });
       }
     });
     

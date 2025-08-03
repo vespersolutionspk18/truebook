@@ -109,25 +109,35 @@ export const POST = requireOrganization(async (req, context) => {
         throw new Error('Vehicle with this VIN already exists in your organization');
       }
       
-      // Also check if VIN exists in Monroney or NeoVin tables (they have global unique constraints)
-      console.log('Checking for existing Monroney...');
-      const existingMonroney = await tx.monroney.findUnique({
-        where: { vin }
+      // Check if VIN exists in Monroney or NeoVin tables for vehicles in this organization
+      console.log('Checking for existing Monroney in organization...');
+      const existingMonroney = await tx.monroney.findFirst({
+        where: { 
+          vin,
+          vehicle: {
+            organizationId: context.organization.id
+          }
+        }
       });
       
       if (existingMonroney) {
-        console.log('Found existing Monroney with VIN:', vin);
-        throw new Error('A vehicle with this VIN already has Monroney data');
+        console.log('Found existing Monroney with VIN in organization:', vin);
+        throw new Error('A vehicle with this VIN already has Monroney data in your organization');
       }
       
-      console.log('Checking for existing NeoVin...');
-      const existingNeoVin = await tx.neoVin.findUnique({
-        where: { vin }
+      console.log('Checking for existing NeoVin in organization...');
+      const existingNeoVin = await tx.neoVin.findFirst({
+        where: { 
+          vin,
+          vehicle: {
+            organizationId: context.organization.id
+          }
+        }
       });
       
       if (existingNeoVin) {
-        console.log('Found existing NeoVin with VIN:', vin);
-        throw new Error('A vehicle with this VIN already has NeoVin data');
+        console.log('Found existing NeoVin with VIN in organization:', vin);
+        throw new Error('A vehicle with this VIN already has NeoVin data in your organization');
       }
     
       // Create vehicle first without pairs

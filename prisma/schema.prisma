@@ -247,7 +247,7 @@ model VehiclePair {
 
 model Monroney {
   id           String         @id @default(cuid())
-  vin          String         @unique
+  vin          String         
   vehicleId    String         @unique
   vehicle      Vehicle        @relation(fields: [vehicleId], references: [uuid], onDelete: Cascade)
   monroneyPairs MonroneyPair[]
@@ -255,6 +255,7 @@ model Monroney {
   updatedAt    DateTime       @updatedAt
 
   @@index([vehicleId])
+  @@index([vin])
 }
 
 model MonroneyPair {
@@ -285,7 +286,7 @@ model MonroneyCredentials {
 
 model NeoVin {
   id                          String                      @id @default(cuid())
-  vin                         String                      @unique
+  vin                         String                      
   vehicleId                   String                      @unique
   vehicle                     Vehicle                     @relation(fields: [vehicleId], references: [uuid], onDelete: Cascade)
   squishVin                   String?

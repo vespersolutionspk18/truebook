@@ -15,9 +15,18 @@ export async function POST(
 
     const { uuid: vehicleId } = await params;
 
-    // Get the vehicle and its VIN
-    const vehicle = await db.vehicle.findUnique({
-      where: { uuid: vehicleId },
+    // Get the vehicle and its VIN - ensure it belongs to user's organization
+    const vehicle = await db.vehicle.findFirst({
+      where: { 
+        uuid: vehicleId,
+        organization: {
+          users: {
+            some: {
+              userId: session.user.id
+            }
+          }
+        }
+      },
       include: { neoVin: true }
     });
 
@@ -330,8 +339,20 @@ export async function GET(
 
     const { uuid: vehicleId } = await params;
 
-    const neoVin = await db.neoVin.findUnique({
-      where: { vehicleId },
+    // Find NeoVin data for vehicle that belongs to user's organization
+    const neoVin = await db.neoVin.findFirst({
+      where: { 
+        vehicleId,
+        vehicle: {
+          organization: {
+            users: {
+              some: {
+                userId: session.user.id
+              }
+            }
+          }
+        }
+      },
       include: {
         interiorColor: true,
         exteriorColor: true,

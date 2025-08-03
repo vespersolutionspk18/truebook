@@ -438,14 +438,11 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
                 setCurrentSessionId(mostRecent.outputData.session.id);
                 await loadSessionOverrides(mostRecent.outputData.session.id);
               } 
-              // Then check in sessions array (new structure)
-              else if (mostRecent.sessions && mostRecent.sessions.length > 0) {
-                const latestSession = mostRecent.sessions[0];
-                if (latestSession.status === 'pending' && new Date(latestSession.expiresAt) > new Date()) {
-                  console.log('useEffect: Loading session from sessions array:', latestSession.id);
-                  setCurrentSessionId(latestSession.id);
-                  await loadSessionOverrides(latestSession.id);
-                }
+              // Then check in validationSession (current structure)
+              else if (mostRecent.validationSession && mostRecent.validationSession.status === 'pending' && new Date(mostRecent.validationSession.expiresAt) > new Date()) {
+                console.log('useEffect: Loading session from validationSession:', mostRecent.validationSession.id);
+                setCurrentSessionId(mostRecent.validationSession.id);
+                await loadSessionOverrides(mostRecent.validationSession.id);
               }
             }
           } else {

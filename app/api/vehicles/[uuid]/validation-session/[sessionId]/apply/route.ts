@@ -229,11 +229,33 @@ export const POST = requireOrganization(async (request: NextRequest, context, { 
       }
     });
 
+    // *** CRITICAL: UPDATE ACCESSORY SELECTION STATES IN DATABASE ***
+    console.log('Updating accessory selection states in database...');
+    
+    // Update all accessories to reflect their new selection state
+    for (const acc of currentAccessories) {
+      const shouldBeSelected = finalSelections.has(acc.code);
+      
+      if (acc.isSelected !== shouldBeSelected) {
+        console.log(`Updating accessory ${acc.code}: ${acc.isSelected} → ${shouldBeSelected}`);
+        await db.bookoutAccessory.update({
+          where: { id: acc.id },
+          data: { isSelected: shouldBeSelected }
+        });
+      }
+    }
+
     // Get updated accessories for revaluation
     const updatedAccessories = await db.bookoutAccessory.findMany({
       where: { bookoutId: bookout.id, isSelected: true }
     });
     const selectedCodes = updatedAccessories.map(acc => acc.code);
+    
+    console.log('Updated accessories in database:', {
+      totalAccessories: currentAccessories.length,
+      selectedAccessories: updatedAccessories.length,
+      selectedCodes: selectedCodes
+    });
 
     // Get fresh valuation from JD Power
     const { revaluateWithSelectedAccessories } = await import('@/lib/jdpower-revaluation');

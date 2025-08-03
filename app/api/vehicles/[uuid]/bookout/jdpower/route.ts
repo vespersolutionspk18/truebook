@@ -248,8 +248,10 @@ export const POST = requireOrganization(
                 // 'isincluded' means it's already included in the base value
                 isFactoryInstalled: accessory.isadded === 1 || accessory.isadded === '1' || accessory.isadded === true || accessory.isincluded === 1,
                 // Selection state - NEW FIELDS
-                // Initially select accessories that are factory installed or included in base value
-                isSelected: accessory.isadded === 1 || accessory.isadded === '1' || accessory.isadded === true || accessory.isincluded === 1,
+                // Initially select accessories that are factory installed, included in base value, or have adjustment values
+                // If an accessory has trade/retail/loan values, it means JD Power is including it in the valuation
+                isSelected: accessory.isadded === 1 || accessory.isadded === '1' || accessory.isadded === true || accessory.isincluded === 1 ||
+                           (safeParseInt(accessory.tradein) > 0 || safeParseInt(accessory.retail) > 0 || safeParseInt(accessory.loan) > 0),
                 // All accessories are initially available
                 isAvailable: true
               };
