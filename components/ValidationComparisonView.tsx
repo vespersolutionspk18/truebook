@@ -283,10 +283,9 @@ export default function ValidationComparisonView({ vehicleUuid, validationId }: 
 
       {/* Tabbed Comparison View */}
       <Tabs defaultValue="values" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="values">Value Comparison</TabsTrigger>
           <TabsTrigger value="accessories">Accessory Changes</TabsTrigger>
-          <TabsTrigger value="timeline">Change Timeline</TabsTrigger>
         </TabsList>
 
         <TabsContent value="values" className="space-y-4">
@@ -513,53 +512,6 @@ export default function ValidationComparisonView({ vehicleUuid, validationId }: 
           </Card>
         </TabsContent>
 
-        <TabsContent value="timeline" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Change Timeline</CardTitle>
-              <CardDescription>
-                Chronological sequence of all changes made during validation
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {comparisonData.changes.timeline.length > 0 ? (
-                <div className="space-y-3">
-                  {comparisonData.changes.timeline.map((change: any, index: number) => (
-                    <div key={index} className="flex items-start gap-4 p-3 border rounded-lg">
-                      <div className="flex items-center gap-2 min-w-[120px]">
-                        {getChangeTypeIcon(change.changeType)}
-                        <Badge variant="outline" className="text-xs">
-                          #{change.sequence}
-                        </Badge>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium">{getChangeTypeLabel(change.changeType)}</p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(change.createdAt).toLocaleTimeString()}
-                          </p>
-                        </div>
-                        <p className="text-sm text-gray-600 mt-1">{change.reason}</p>
-                        {change.entityCode && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            {change.entityType}: {change.entityCode}
-                          </p>
-                        )}
-                        {change.valueDifference && (
-                          <p className={`text-sm font-medium mt-1 ${change.valueDifference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {change.valueDifference >= 0 ? '+' : ''}{formatCurrency(change.valueDifference)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-gray-500 py-8">No changes recorded for this validation</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );

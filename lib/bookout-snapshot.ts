@@ -350,9 +350,9 @@ export async function getBookoutComparison(validationId: string) {
     changes: validation.changeLogs,
     changesByType,
     summary: {
-      totalChanges: validation.changeLogs.length,
+      totalChanges: (changesByType.accessory_selected?.length || 0) + (changesByType.accessory_deselected?.length || 0),
       valueImpact: valueDifferences.cleanTradeIn, // Use trade-in as primary metric
-      accessoryChanges: changesByType.accessory_selected?.length || 0
+      accessoryChanges: (changesByType.accessory_selected?.length || 0) + (changesByType.accessory_deselected?.length || 0)
     }
   };
 }

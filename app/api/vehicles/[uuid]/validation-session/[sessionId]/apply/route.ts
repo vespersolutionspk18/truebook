@@ -309,7 +309,31 @@ export const POST = requireOrganization(async (request: NextRequest, context, { 
       }
     });
 
-    // Simple change log
+    // Create individual change log entries for each accessory change
+    let sequenceCounter = 1;
+    
+    for (const change of changedAccessories) {
+      const changeType = change.action.includes('Added') ? 'accessory_selected' : 'accessory_deselected';
+      const accessory = currentAccessories.find(a => a.code === change.code);
+      
+      await db.bookoutChangeLog.create({
+        data: {
+          validationId: session.validationId,
+          bookoutId: bookout.id,
+          changeType: changeType,
+          entityType: 'accessory',
+          entityId: accessory?.id,
+          entityCode: change.code,
+          fieldName: 'isSelected',
+          beforeValue: changeType === 'accessory_selected' ? 'false' : 'true',
+          afterValue: changeType === 'accessory_selected' ? 'true' : 'false',
+          reason: change.action,
+          sequence: sequenceCounter++
+        }
+      });
+    }
+    
+    // Overall bookout revaluation log
     if (changedAccessories.length > 0) {
       await db.bookoutChangeLog.create({
         data: {
@@ -321,7 +345,7 @@ export const POST = requireOrganization(async (request: NextRequest, context, { 
           beforeValue: JSON.stringify({ selectedCount: currentAccessories.filter(a => a.isSelected).length }),
           afterValue: JSON.stringify({ selectedCount: finalSelections.size, changes: changedAccessories }),
           reason: 'Applied AI validation with user overrides',
-          sequence: 1
+          sequence: sequenceCounter
         }
       });
     }

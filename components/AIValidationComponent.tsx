@@ -438,11 +438,22 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
                 setCurrentSessionId(mostRecent.outputData.session.id);
                 await loadSessionOverrides(mostRecent.outputData.session.id);
               } 
-              // Then check in validationSession (current structure)
-              else if (mostRecent.validationSession && mostRecent.validationSession.status === 'pending' && new Date(mostRecent.validationSession.expiresAt) > new Date()) {
-                console.log('useEffect: Loading session from validationSession:', mostRecent.validationSession.id);
-                setCurrentSessionId(mostRecent.validationSession.id);
-                await loadSessionOverrides(mostRecent.validationSession.id);
+              // Then check in validationSession (current structure) - load both pending and applied sessions
+              else if (mostRecent.validationSession) {
+                const session = mostRecent.validationSession;
+                const isExpired = new Date(session.expiresAt) <= new Date();
+                
+                if (session.status === 'pending' && !isExpired) {
+                  console.log('useEffect: Loading pending session from validationSession:', session.id);
+                } else if (session.status === 'applied') {
+                  console.log('useEffect: Loading applied session from validationSession:', session.id);
+                } else {
+                  console.log('useEffect: Session found but expired or cancelled:', session.id, 'status:', session.status);
+                }
+                
+                // Load session regardless of status to show override states
+                setCurrentSessionId(session.id);
+                await loadSessionOverrides(session.id);
               }
             }
           } else {
@@ -483,6 +494,9 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
               {sessionDetails.isExpired && (
                 <Badge variant="destructive" className="ml-2">Session Expired</Badge>
               )}
+              {sessionDetails.status === 'applied' && (
+                <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">Changes Applied</Badge>
+              )}
             </div>
           )}
           {!validationResult && !isValidating && (
@@ -495,7 +509,7 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
           {validationResult && currentSessionId && (
             <Button 
               onClick={handleApplyChanges} 
-              disabled={isApplyingSession || sessionDetails?.isExpired}
+              disabled={isApplyingSession || sessionDetails?.isExpired || sessionDetails?.status === 'applied'}
               size="sm"
               className="bg-green-600 hover:bg-green-700 text-white"
             >
@@ -503,6 +517,11 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   Updating Bookout...
+                </>
+              ) : sessionDetails?.status === 'applied' ? (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Bookout Updated
                 </>
               ) : (
                 <>
@@ -730,7 +749,7 @@ export default function AIValidationComponent({ vehicleUuid, onValidationComplet
                                   handleOverride(comparison.jd_power_accessory.code);
                                 }}
                                 className="h-6 text-xs px-2"
-                                disabled={!currentSessionId}
+                                disabled={!currentSessionId || sessionDetails?.status === 'applied' || sessionDetails?.isExpired}
                               >
                                 {isOverridden ? 'Overridden' : 'Override'}
                               </Button>
