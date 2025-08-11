@@ -1,5 +1,5 @@
 import { DefaultSession } from "next-auth";
-import { OrgRole, PlanType } from "@prisma/client";
+import { UserRole, OrgRole, PlanType } from "@prisma/client";
 
 declare module "next-auth" {
   interface Session {
@@ -7,7 +7,9 @@ declare module "next-auth" {
       id: string;
       email: string;
       name?: string | null;
-    } & DefaultSession["user"];
+      image?: string | null;
+      role: UserRole;
+    };
     currentOrganization?: {
       id: string;
       name: string;
@@ -15,7 +17,7 @@ declare module "next-auth" {
       role: OrgRole;
       plan: PlanType;
     };
-    organizations?: Array<{
+    organizations: Array<{
       id: string;
       name: string;
       slug: string;
@@ -28,22 +30,29 @@ declare module "next-auth" {
     id: string;
     email: string;
     name?: string | null;
+    image?: string | null;
+    role: UserRole;
+    organizations?: Array<{
+      organization: {
+        id: string;
+        name: string;
+        slug: string;
+        plan: PlanType;
+      };
+      role: OrgRole;
+    }>;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     userId: string;
-    email: string;
+    email?: string | null;
     name?: string | null;
-    currentOrganization?: {
-      id: string;
-      name: string;
-      slug: string;
-      role: OrgRole;
-      plan: PlanType;
-    };
-    organizations?: Array<{
+    image?: string | null;
+    role: UserRole;
+    currentOrgId?: string;
+    organizations: Array<{
       id: string;
       name: string;
       slug: string;

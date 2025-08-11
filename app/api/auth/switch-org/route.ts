@@ -30,11 +30,12 @@ export async function POST(req: Request) {
       org => org.id === organizationId
     );
 
-    // Return the organization data for client-side state update
-    // The actual session update will happen through client-side navigation
+    // Return success with the organization data
+    // Client will need to trigger a session update via next-auth/react
     return NextResponse.json({
       success: true,
-      organization
+      organization,
+      currentOrgId: organizationId
     });
   } catch (error) {
     console.error('Error switching organization:', error);

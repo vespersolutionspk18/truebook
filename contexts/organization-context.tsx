@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signIn } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { OrgRole, PlanType } from '@prisma/client';
 
@@ -23,7 +23,7 @@ interface OrganizationContextType {
 const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined);
 
 export function OrganizationProvider({ children }: { children: ReactNode }) {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(true);
@@ -31,23 +31,16 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
 
   useEffect(() => {
-    console.log('OrganizationProvider - session status:', status);
-    console.log('OrganizationProvider - session data:', session);
-    
     if (status === 'loading') {
-      console.log('OrganizationProvider - session is still loading');
       setIsLoading(true);
       return;
     }
     
     if (session) {
-      console.log('OrganizationProvider - session.currentOrganization:', session.currentOrganization);
-      console.log('OrganizationProvider - session.organizations:', session.organizations);
       setCurrentOrganization(session.currentOrganization || null);
       setOrganizations(session.organizations || []);
       setIsLoading(false);
     } else {
-      console.log('OrganizationProvider - no session found');
       setCurrentOrganization(null);
       setOrganizations([]);
       setIsLoading(false);
@@ -69,7 +62,14 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         throw new Error('Failed to switch organization');
       }
 
-      const { organization } = await response.json();
+      const { organization, currentOrgId } = await response.json();
+      
+      // Update the session with the new organization
+      await update({
+        currentOrgId: currentOrgId
+      });
+      
+      // Update local state immediately for UI responsiveness
       setCurrentOrganization(organization);
 
       // Set organization header for subsequent requests

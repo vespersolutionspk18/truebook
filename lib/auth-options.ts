@@ -5,69 +5,11 @@ import { compare } from "bcrypt";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { UserRole, OrgRole, PlanType } from "@prisma/client";
 
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
-      role: UserRole;
-    };
-    currentOrganization?: {
-      id: string;
-      name: string;
-      slug: string;
-      role: OrgRole;
-      plan: PlanType;
-    };
-    organizations: Array<{
-      id: string;
-      name: string;
-      slug: string;
-      role: OrgRole;
-      plan: PlanType;
-    }>;
-  }
-
-  interface User {
-    id: string;
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-    role: UserRole;
-    organizations?: Array<{
-      organization: {
-        id: string;
-        name: string;
-        slug: string;
-        plan: PlanType;
-      };
-      role: OrgRole;
-    }>;
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
-    email?: string | null;
-    name?: string | null;
-    image?: string | null;
-    role: UserRole;
-    currentOrgId?: string;
-    organizations: Array<{
-      id: string;
-      name: string;
-      slug: string;
-      role: OrgRole;
-      plan: PlanType;
-    }>;
-  }
-}
+// Type declarations moved to types/next-auth.d.ts
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
     maxAge: 7 * 24 * 60 * 60, // 7 days
@@ -148,7 +90,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, trigger, session }) {
       // Initial sign in
       if (user) {
-        token.id = user.id;
+        token.userId = user.id;
         token.email = user.email;
         token.name = user.name;
         token.image = user.image;
@@ -169,17 +111,23 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // Handle organization switching
-      if (trigger === "update" && session?.currentOrgId) {
-        token.currentOrgId = session.currentOrgId;
+      // Handle organization switching or other updates
+      if (trigger === "update") {
+        if (session?.currentOrgId) {
+          token.currentOrgId = session.currentOrgId;
+        }
+        // Handle any other session updates
+        if (session?.organizations) {
+          token.organizations = session.organizations;
+        }
       }
 
       return token;
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string;
-        session.user.email = token.email;
+      if (token && token.userId) {
+        session.user.id = token.userId;
+        session.user.email = token.email || '';
         session.user.name = token.name;
         session.user.image = token.image;
         session.user.role = token.role;
@@ -196,6 +144,9 @@ export const authOptions: NextAuthOptions = {
             );
             if (currentOrg) {
               session.currentOrganization = currentOrg;
+            } else {
+              // Fallback to first org if currentOrgId is invalid
+              session.currentOrganization = token.organizations[0];
             }
           } else {
             // If no current org is set, use the first organization

@@ -190,65 +190,49 @@ export function Sidebar({ className, expanded = true, onExpandedChange }: Sideba
         <div className="flex-1 px-3 py-2">
           <div className="flex flex-col gap-1.5">
             <div className="flex flex-col gap-1.5">
-              <Link href="/dashboard">
-                <div
-                  className={cn(
-                    "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
-                    !expanded && "justify-center p-2",
-                    pathname === "/dashboard" && "bg-white border-gray-300 text-black font-medium shadow-sm"
-                  )}
-                >
-                  <MdDashboard className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
-                  {expanded && <span className="ml-3 text-sm">Dashboard</span>}
-                </div>
+              <Link 
+                href="/dashboard"
+                className={cn(
+                  "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
+                  !expanded && "justify-center p-2",
+                  pathname === "/dashboard" && "bg-white border-gray-300 text-black font-medium shadow-sm"
+                )}
+              >
+                <MdDashboard className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
+                {expanded && <span className="ml-3 text-sm">Dashboard</span>}
               </Link>
-              <Link href="/dashboard/vin-lookup">
-                <div
-                  className={cn(
-                    "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
-                    !expanded && "justify-center p-2",
-                    pathname === "/dashboard/vin-lookup" && "bg-white border-gray-300 text-black font-medium shadow-sm"
-                  )}
-                >
-                  <CiSearch className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
-                  {expanded && <span className="ml-3 text-sm">VIN Lookup</span>}
-                </div>
+              <Link 
+                href="/dashboard/vin-lookup"
+                className={cn(
+                  "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
+                  !expanded && "justify-center p-2",
+                  pathname === "/dashboard/vin-lookup" && "bg-white border-gray-300 text-black font-medium shadow-sm"
+                )}
+              >
+                <CiSearch className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
+                {expanded && <span className="ml-3 text-sm">VIN Lookup</span>}
               </Link>
-              <Link href="/dashboard/comparisons">
-                <div
-                  className={cn(
-                    "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
-                    !expanded && "justify-center p-2",
-                    pathname === "/dashboard/comparisons" && "bg-white border-gray-300 text-black font-medium shadow-sm"
-                  )}
-                >
-                  <IoIosGitCompare className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
-                  {expanded && <span className="ml-3 text-sm">Comparisons</span>}
-                </div>
+              <Link 
+                href="/dashboard/inventory"
+                className={cn(
+                  "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
+                  !expanded && "justify-center p-2",
+                  pathname === "/dashboard/inventory" && "bg-white border-gray-300 text-black font-medium shadow-sm"
+                )}
+              >
+                <CiSaveUp2 className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
+                {expanded && <span className="ml-3 text-sm">Inventory</span>}
               </Link>
-              <Link href="/dashboard/inventory">
-                <div
-                  className={cn(
-                    "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
-                    !expanded && "justify-center p-2",
-                    pathname === "/dashboard/inventory" && "bg-white border-gray-300 text-black font-medium shadow-sm"
-                  )}
-                >
-                  <CiSaveUp2 className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
-                  {expanded && <span className="ml-3 text-sm">Inventory</span>}
-                </div>
-              </Link>
-              <Link href="/dashboard/users">
-                <div
-                  className={cn(
-                    "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
-                    !expanded && "justify-center p-2",
-                    pathname === "/dashboard/users" && "bg-white border-gray-300 text-black font-medium shadow-sm"
-                  )}
-                >
-                  <HiOutlineUsers className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
-                  {expanded && <span className="ml-3 text-sm">Users</span>}
-                </div>
+              <Link 
+                href="/dashboard/users"
+                className={cn(
+                  "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
+                  !expanded && "justify-center p-2",
+                  pathname === "/dashboard/users" && "bg-white border-gray-300 text-black font-medium shadow-sm"
+                )}
+              >
+                <HiOutlineUsers className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
+                {expanded && <span className="ml-3 text-sm">Users</span>}
               </Link>
             </div>
             
@@ -257,54 +241,28 @@ export function Sidebar({ className, expanded = true, onExpandedChange }: Sideba
         <div className="mt-auto pt-4">
           <div className="mx-3 py-2 border-t border-gray-200">
             <div className="flex flex-col gap-1">
-              {/* Navigation Items */}
-              <Link href="/dashboard/notifications">
-                <div
-                  className={cn(
-                    "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
-                    !expanded && "justify-center p-2",
-                    pathname === "/dashboard/notifications" && "bg-white border-gray-300 text-black font-medium shadow-sm"
-                  )}
-                >
-                  <IoNotificationsOutline className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
-                  {expanded && <span className="ml-3 text-sm">Notifications</span>}
-                </div>
+         
+              <Link 
+                href="/dashboard/integrations"
+                className={cn(
+                  "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
+                  !expanded && "justify-center p-2",
+                  pathname === "/dashboard/integrations" && "bg-white border-gray-300 text-black font-medium shadow-sm"
+                )}
+              >
+                <TbPlugConnected className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
+                {expanded && <span className="ml-3 text-sm">Integrations</span>}
               </Link>
-              <Link href="/dashboard/help">
-                <div
-                  className={cn(
-                    "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
-                    !expanded && "justify-center p-2",
-                    pathname === "/dashboard/help" && "bg-white border-gray-300 text-black font-medium shadow-sm"
-                  )}
-                >
-                  <IoHelpCircleOutline className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
-                  {expanded && <span className="ml-3 text-sm">Help Center</span>}
-                </div>
-              </Link>
-              <Link href="/dashboard/integrations">
-                <div
-                  className={cn(
-                    "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
-                    !expanded && "justify-center p-2",
-                    pathname === "/dashboard/integrations" && "bg-white border-gray-300 text-black font-medium shadow-sm"
-                  )}
-                >
-                  <TbPlugConnected className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
-                  {expanded && <span className="ml-3 text-sm">Integrations</span>}
-                </div>
-              </Link>
-              <Link href="/dashboard/settings">
-                <div
-                  className={cn(
-                    "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
-                    !expanded && "justify-center p-2",
-                    pathname === "/dashboard/settings" && "bg-white border-gray-300 text-black font-medium shadow-sm"
-                  )}
-                >
-                  <MdSettings className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
-                  {expanded && <span className="ml-3 text-sm">Settings</span>}
-                </div>
+              <Link 
+                href="/dashboard/settings"
+                className={cn(
+                  "flex items-center w-full p-2 rounded-xl text-gray-800 border-gray-100 hover:bg-white border-[1px] hover:border-gray-300 hover:text-black hover:font-medium hover:shadow-sm",
+                  !expanded && "justify-center p-2",
+                  pathname === "/dashboard/settings" && "bg-white border-gray-300 text-black font-medium shadow-sm"
+                )}
+              >
+                <MdSettings className="h-5 w-5 stroke-gray-800 hover:stroke-black" />
+                {expanded && <span className="ml-3 text-sm">Settings</span>}
               </Link>
               {/* User Profile Section */}
               <DropdownMenu>

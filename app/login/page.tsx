@@ -49,8 +49,6 @@ export default function LoginPage() {
         password,
         redirect: false,
       });
-      
-      console.log("Sign-in response:", res);
 
       if (!res?.ok || res?.error) {
         toast({
@@ -66,12 +64,9 @@ export default function LoginPage() {
         description: "Logged in successfully",
       });
 
-      console.log("Redirecting to:", callbackUrl);
       router.replace(callbackUrl);
-      // router.refresh(); // Comment out or remove this line
-      console.log("Replaced URL with:", callbackUrl);
+      router.refresh();
     } catch (error) {
-      console.error("Authentication error:", error);
       toast({
         title: "Error",
         description: "An error occurred during sign in",

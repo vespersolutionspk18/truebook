@@ -23,7 +23,7 @@ export interface AuthContext {
 export async function getAuthContext(req?: NextRequest): Promise<AuthContext | null> {
   const session = await getServerSession(authOptions);
   
-  if (!session?.user) {
+  if (!session?.user || !session.user.id) {
     return null;
   }
 
@@ -46,7 +46,7 @@ export async function getAuthContext(req?: NextRequest): Promise<AuthContext | n
   return {
     user: {
       id: session.user.id,
-      email: session.user.email!,
+      email: session.user.email,
       name: session.user.name,
       image: session.user.image,
       role: session.user.role
